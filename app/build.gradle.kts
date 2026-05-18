@@ -66,4 +66,6 @@ dependencies {
     implementation("androidx.room:room-runtime:${libs.versions.room.get()}")
     implementation("androidx.room:room-ktx:${libs.versions.room.get()}")
     ksp("androidx.room:room-compiler:${libs.versions.room.get()}")
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.compose.material3.windowsizeclass)
 }

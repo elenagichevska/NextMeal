@@ -13,13 +13,11 @@ import androidx.room.RoomDatabase
 
 @Entity(tableName = "local_recipes")
 class LocalRecipe {
-    @PrimaryKey(autoGenerate = true)
-    var id: Int = 0
-
+    @PrimaryKey(autoGenerate = true) var id: Int = 0
     var title: String = ""
     var ingredients: String = ""
     var instructions: String = ""
-    var isPublic: Boolean = false // Ова вака напишано KSP нема да го збуни
+    var isPublic: Boolean = false
 }
 
 @Dao
@@ -47,7 +45,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "nextmeal_database"
                 )
                     .fallbackToDestructiveMigration()
-                    .allowMainThreadQueries() // Ова го оставаме за да ни биде сигурно во MainActivity
+                    .allowMainThreadQueries()
                     .build()
                 INSTANCE = instance
                 instance
