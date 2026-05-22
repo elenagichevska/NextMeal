@@ -18,6 +18,7 @@ class LocalRecipe {
     var ingredients: String = ""
     var instructions: String = ""
     var isPublic: Boolean = false
+    var imageUrl: String = ""
 }
 
 @Dao

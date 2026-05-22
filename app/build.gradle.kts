@@ -7,11 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.nextmeal"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.nextmeal"
@@ -42,14 +38,34 @@ android {
 }
 
 dependencies {
+    // AndroidX & Lifecycle
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
+
+    // Compose BOM & UI
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation("androidx.compose.material:material-icons-extended") // Потребно за AutoMirrored и дополнителни икони
+
+    // Navigation
+    implementation("androidx.navigation:navigation-compose:2.8.5")
+
+    // Room Database (Претпоставка дека користиш KSP според плагините)
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1")
+
+    // Firebase & Google Play Services Auth
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
+
+    // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -58,14 +74,12 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
-    implementation(platform(libs.firebase.bom))
-    implementation("com.google.firebase:firebase-auth-ktx")
-    implementation("com.google.firebase:firebase-firestore-ktx")
-    implementation("com.google.firebase:firebase-analytics")
+    implementation("androidx.compose.material3:material3-window-size-class")
 
-    implementation("androidx.room:room-runtime:${libs.versions.room.get()}")
-    implementation("androidx.room:room-ktx:${libs.versions.room.get()}")
-    ksp("androidx.room:room-compiler:${libs.versions.room.get()}")
-    implementation(libs.androidx.navigation.compose)
-    implementation(libs.androidx.compose.material3.windowsizeclass)
+    // Retrofit за API повици
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+
+// Coil за приказ на слики од интернет (бидејќи рецептите од API имаат слики)
+    implementation("io.coil-kt:coil-compose:2.4.0")
 }
