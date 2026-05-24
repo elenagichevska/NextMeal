@@ -23,6 +23,8 @@ import androidx.navigation.compose.rememberNavController
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.saveable.rememberSaveable
 
 class MainActivity : ComponentActivity() {
 
@@ -130,6 +132,13 @@ fun NavigationGraph(navController: NavHostController, recipeDao: RecipeDao) {
     val localRecipes by recipeDao.getAllLocalRecipes().collectAsState(initial = emptyList())
     val db = Firebase.firestore
 
+    var selectedRecipeForDetail by remember { mutableStateOf<DetailRecipeView?>(null) }
+    val navigationScope = rememberCoroutineScope()
+
+    // НАЈБЕЗБЕДЕН НАЧИН: rememberSaveable кој ја чува состојбата во меморијата на Android системски!
+    var globalSelectedIngredients by rememberSaveable { mutableStateOf(setOf<String>()) }
+    var globalHasSearched by rememberSaveable { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
         try {
             db.collection("public_recipes")
@@ -147,8 +156,106 @@ fun NavigationGraph(navController: NavHostController, recipeDao: RecipeDao) {
     }
 
     NavHost(navController = navController, startDestination = Screen.SmartSearch.route) {
-        composable(Screen.SmartSearch.route) { SmartSearchScreen(localRecipes, publicRecipes) }
-        composable(Screen.Explorer.route) { ExplorerScreen(publicRecipes = publicRecipes) }
-        composable(Screen.Profile.route) { ProfileScreen(recipeDao, localRecipes, db) }
+
+        // 1. Smart Search (Fridge)
+        composable(Screen.SmartSearch.route) {
+            SmartSearchScreen(
+                localRecipes = localRecipes,
+                publicRecipes = publicRecipes,
+                // Ги праќаме новите стабилни променливи и нивните функции за промена
+                selectedIngredients = globalSelectedIngredients,
+                onIngredientsChange = { globalSelectedIngredients = it },
+                hasSearched = globalHasSearched,
+                onHasSearchedChange = { globalHasSearched = it },
+                onRecipeClick = { detailView ->
+                    if (detailView.source == "Global API" && detailView.id.isNotEmpty()) {
+                        navigationScope.launch {
+                            try {
+                                val response = MealApiService.instance.getMealDetailsById(detailView.id)
+                                val fullMeal = response.meals?.firstOrNull()
+                                if (fullMeal != null) {
+                                    val ingredientsList = listOfNotNull(
+                                        fullMeal.strIngredient1, fullMeal.strIngredient2,
+                                        fullMeal.strIngredient3, fullMeal.strIngredient4,
+                                        fullMeal.strIngredient5
+                                    ).filter { it.isNotEmpty() && it.isNotBlank() }
+
+                                    val compiledIngredients = if (ingredientsList.isNotEmpty()) ingredientsList.joinToString(", ") else detailView.ingredients
+
+                                    selectedRecipeForDetail = detailView.copy(
+                                        instructions = fullMeal.strInstructions ?: "No detailed instructions found.",
+                                        ingredients = compiledIngredients
+                                    )
+                                } else {
+                                    selectedRecipeForDetail = detailView
+                                }
+                            } catch (_: Exception) {
+                                selectedRecipeForDetail = detailView
+                            }
+                            navController.navigate("recipe_detail")
+                        }
+                    } else {
+                        selectedRecipeForDetail = detailView
+                        navController.navigate("recipe_detail")
+                    }
+                }
+            )
+        }
+
+        // 2. Explorer (Explore)
+        composable(Screen.Explorer.route) {
+            ExplorerScreen(
+                publicRecipes = publicRecipes,
+                onRecipeClick = { detailView ->
+                    if (detailView.source == "Global API" && detailView.id.isNotEmpty()) {
+                        navigationScope.launch {
+                            try {
+                                val response = MealApiService.instance.getMealDetailsById(detailView.id)
+                                val fullMeal = response.meals?.firstOrNull()
+                                if (fullMeal != null) {
+                                    val ingredientsList = listOfNotNull(
+                                        fullMeal.strIngredient1, fullMeal.strIngredient2,
+                                        fullMeal.strIngredient3, fullMeal.strIngredient4,
+                                        fullMeal.strIngredient5
+                                    ).filter { it.isNotEmpty() && it.isNotBlank() }
+
+                                    val compiledIngredients = if (ingredientsList.isNotEmpty()) ingredientsList.joinToString(", ") else detailView.ingredients
+
+                                    selectedRecipeForDetail = detailView.copy(
+                                        instructions = fullMeal.strInstructions ?: "No detailed instructions found.",
+                                        ingredients = compiledIngredients
+                                    )
+                                } else {
+                                    selectedRecipeForDetail = detailView
+                                }
+                            } catch (_: Exception) {
+                                selectedRecipeForDetail = detailView
+                            }
+                            navController.navigate("recipe_detail")
+                        }
+                    } else {
+                        selectedRecipeForDetail = detailView
+                        navController.navigate("recipe_detail")
+                    }
+                }
+            )
+        }
+
+        // 3. Profile
+        composable(Screen.Profile.route) {
+            ProfileScreen(recipeDao, localRecipes, db)
+        }
+
+        // 4. Detail Screen
+        composable("recipe_detail") {
+            selectedRecipeForDetail?.let { recipe ->
+                RecipeDetailScreen(
+                    recipe = recipe,
+                    onBackClick = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+        }
     }
 }

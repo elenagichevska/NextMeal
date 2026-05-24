@@ -31,7 +31,7 @@ fun AuthScreen() {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = if (isRegisterMode) "Create Profile 🍳" else "Welcome to NextMeal 🍉",
+            text = if (isRegisterMode) "Create Profile 🍳" else "Welcome to NextMeal 🍽️",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
@@ -132,6 +132,7 @@ fun AuthScreen() {
         Spacer(modifier = Modifier.height(16.dp))
 
         TextButton(onClick = { isRegisterMode = !isRegisterMode }) {
+
             Text(if (isRegisterMode) "Already have a profile? Log in!" else "Don't have a profile? Register here!")
         }
     }

@@ -8,8 +8,28 @@ import retrofit2.http.Query
 data class ApiMeal(
     val strMeal: String,
     val strMealThumb: String,
-    val idMeal: String
-)
+    val idMeal: String,
+    val strInstructions: String? = null,
+    val strIngredient1: String? = null,
+    val strIngredient2: String? = null,
+    val strIngredient3: String? = null,
+    val strIngredient4: String? = null,
+    val strIngredient5: String? = null,
+    val strIngredient6: String? = null,
+    val strIngredient7: String? = null,
+    val strIngredient8: String? = null,
+    val strIngredient9: String? = null,
+    val strIngredient10: String? = null,
+) {
+    // 💡 ЈА ДОДАВАМЕ ТУКА: Оваа функција ги собира состојките во еден текст одделен со запирки
+    fun getFormattedIngredients(): String {
+        val list = listOfNotNull(
+            strIngredient1, strIngredient2, strIngredient3, strIngredient4, strIngredient5
+        ).filter { it.trim().isNotEmpty() }
+
+        return if (list.isEmpty()) "Ingredients look-up complete" else list.joinToString(", ")
+    }
+}
 
 data class MealResponse(
     val meals: List<ApiMeal>?
@@ -22,10 +42,16 @@ interface MealApiService {
         @Query("i") ingredient: String
     ): MealResponse
 
-    // ОВА ГО ДОДАВАМЕ за Глобално (по име на јадење)
+    // Ова е за Глобално (по име на јадење)
     @GET("search.php")
     suspend fun searchMealsByName(
         @Query("s") name: String
+    ): MealResponse
+
+    // 🛠️ ПОПРАВЕНО: Сменето е од @Query("id") во @Query("i") за да работи со TheMealDB
+    @GET("lookup.php")
+    suspend fun getMealDetailsById(
+        @Query("i") id: String
     ): MealResponse
 
     companion object {
