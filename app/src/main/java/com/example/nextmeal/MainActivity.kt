@@ -149,7 +149,8 @@ val DetailRecipeViewSaver = mapSaver(
 @Composable
 fun NavigationGraph(navController: NavHostController, recipeDao: RecipeDao, isWideScreen: Boolean) {
     val publicRecipes = remember { mutableStateListOf<Recipe>() }
-    val localRecipes by recipeDao.getAllLocalRecipes().collectAsState(initial = emptyList())
+    val userId = Firebase.auth.currentUser?.uid ?: ""
+    val localRecipes by recipeDao.getLocalRecipesForUser(userId).collectAsState(initial = emptyList())
     val db = Firebase.firestore
 
     var selectedRecipeForDetail by rememberSaveable(stateSaver = DetailRecipeViewSaver) {
