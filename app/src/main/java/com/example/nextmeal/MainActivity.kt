@@ -1,8 +1,11 @@
 package com.example.nextmeal
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -29,7 +32,21 @@ import androidx.compose.runtime.saveable.mapSaver
 import androidx.compose.ui.unit.dp
 import java.util.Calendar
 
+// МИНИМАЛНИ И НАЈСТАБИЛНИ ИМПОРТИ ЗА GOOGLE И FACEBOOK
+import com.facebook.CallbackManager
+import com.facebook.FacebookCallback
+import com.facebook.FacebookException
+import com.facebook.login.LoginManager
+import com.facebook.login.LoginResult
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
+import com.google.firebase.auth.FacebookAuthProvider
+import com.google.firebase.auth.GoogleAuthProvider
+
 class MainActivity : ComponentActivity() {
+
+    private val callbackManager = CallbackManager.Factory.create()
 
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,16 +61,93 @@ class MainActivity : ComponentActivity() {
                     val windowSizeClass = calculateWindowSizeClass(this)
                     val isWideScreen = windowSizeClass.widthSizeClass != WindowWidthSizeClass.Compact
 
-                    var currentUser by remember { mutableStateOf(Firebase.auth.currentUser) }
+                    val auth = Firebase.auth
+                    var currentUser by remember { mutableStateOf(auth.currentUser) }
 
-                    LaunchedEffect(Unit) {
-                        Firebase.auth.addAuthStateListener { auth ->
-                            currentUser = auth.currentUser
+                    val googleClientId = getString(R.string.my_google_web_client_id)
+
+                    // ==========================================
+                    // 1. СИГУРЕН И ЧИСТ GOOGLE ЛАНСЕР
+                    // ==========================================
+                    val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                        .requestIdToken(googleClientId)
+                        .requestEmail()
+                        .build()
+                    val googleSignInClient = GoogleSignIn.getClient(this, gso)
+
+                    val googleSignInLauncher = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.StartActivityForResult()
+                    ) { result ->
+                        if (result.resultCode == RESULT_OK) {
+                            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+                            try {
+                                val account = task.getResult(ApiException::class.java)!!
+                                val credential = GoogleAuthProvider.getCredential(account.idToken, null)
+                                auth.signInWithCredential(credential)
+                                    .addOnCompleteListener { authTask ->
+                                        if (authTask.isSuccessful) {
+                                            Toast.makeText(this, "Welcome ${account.displayName}!", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                            } catch (e: ApiException) {
+                                Toast.makeText(this, "Google Failed: ${e.message}", Toast.LENGTH_LONG).show()
+                            }
                         }
                     }
 
+                    // ==========================================
+                    // 2. СИГУРЕН И ЧИСТ FACEBOOK ЛАНСЕР
+                    // ==========================================
+                    val facebookLauncher = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.StartActivityForResult()
+                    ) { result ->
+                        callbackManager.onActivityResult(0xface, result.resultCode, result.data)
+                    }
+
+                    // Регистрирање на Facebook Callback
+                    LaunchedEffect(Unit) {
+                        LoginManager.getInstance().registerCallback(callbackManager, object : FacebookCallback<LoginResult> {
+                            override fun onSuccess(result: LoginResult) {
+                                val token = result.accessToken.token
+                                val credential = FacebookAuthProvider.getCredential(token)
+                                auth.signInWithCredential(credential)
+                                    .addOnCompleteListener { authTask ->
+                                        if (authTask.isSuccessful) {
+                                            Toast.makeText(this@MainActivity, "Facebook Login Successful!", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                            }
+                            override fun onCancel() {
+                                Toast.makeText(this@MainActivity, "Facebook Login Cancelled", Toast.LENGTH_SHORT).show()
+                            }
+                            override fun onError(error: FacebookException) {
+                                Toast.makeText(this@MainActivity, "Facebook Error: ${error.message}", Toast.LENGTH_LONG).show()
+                            }
+                        })
+                    }
+
+                    // Следење на состојбата на корисникот
+                    LaunchedEffect(Unit) {
+                        auth.addAuthStateListener { firebaseAuth ->
+                            currentUser = firebaseAuth.currentUser
+                        }
+                    }
+
+                    // ПРИКАЗ НА ЕКРАНИ
                     if (currentUser == null) {
-                        AuthScreen()
+                        AuthScreen(
+                            onGoogleSignIn = {
+                                val signInIntent = googleSignInClient.signInIntent
+                                googleSignInLauncher.launch(signInIntent)
+                            },
+                            onFacebookSignIn = {
+                                LoginManager.getInstance().logInWithReadPermissions(
+                                    this,
+                                    listOf("email", "public_profile")
+                                )
+                                facebookLauncher.launch(android.content.Intent())
+                            }
+                        )
                     } else {
                         val navController = rememberNavController()
                         NavigationGraph(navController = navController, recipeDao = recipeDao, isWideScreen = isWideScreen)
@@ -63,6 +157,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+// Останатиот дел од кодот (Screens, Layouts, NavigationGraph) си останува апсолутно ист...
 
 sealed class Screen(val route: String, val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
     object SmartSearch : Screen("smart_search", "Fridge", Icons.Default.Search)
@@ -166,11 +262,9 @@ fun NavigationGraph(navController: NavHostController, recipeDao: RecipeDao, isWi
     }
     val navigationScope = rememberCoroutineScope()
 
-    // СОСТОЈБИ ЗА SMART SEARCH
     var globalSelectedIngredients by rememberSaveable { mutableStateOf(setOf<String>()) }
     var globalHasSearched by rememberSaveable { mutableStateOf(false) }
 
-    // ГЛОБАЛНИ СОСТОЈБИ ЗА EXPLORER SCREEN (Паметен 24-часовен тајминг базиран на датум)
     val searchKeywords =
         remember { listOf("pizza", "burger", "chicken", "pasta", "salad", "cake", "seafood") }
 
@@ -220,7 +314,6 @@ fun NavigationGraph(navController: NavHostController, recipeDao: RecipeDao, isWi
 
     NavHost(navController = navController, startDestination = Screen.SmartSearch.route) {
 
-        // 1. Smart Search (Fridge)
         composable(Screen.SmartSearch.route) {
             MainAppLayout(navController = navController, isWideScreen = isWideScreen) {
                 SmartSearchScreen(
@@ -271,7 +364,6 @@ fun NavigationGraph(navController: NavHostController, recipeDao: RecipeDao, isWi
             }
         }
 
-        // 2. Explorer (Explore)
         composable(Screen.Explorer.route) {
             MainAppLayout(navController = navController, isWideScreen = isWideScreen) {
                 ExplorerScreen(
@@ -288,24 +380,19 @@ fun NavigationGraph(navController: NavHostController, recipeDao: RecipeDao, isWi
             }
         }
 
-        // 3. Profile
         composable(Screen.Profile.route) {
             MainAppLayout(navController = navController, isWideScreen = isWideScreen) {
                 ProfileScreen(recipeDao, localRecipes, db)
             }
         }
 
-        // 4. Detail Screen
         composable("recipe_detail") {
-            // Го зачувуваме рецептот во локална променлива во рамки на овој екран
-            // за да остане стабилен дури и ако глобалната состојба се смени
             val currentRecipe = remember { selectedRecipeForDetail }
 
             if (currentRecipe.title.isNotEmpty()) {
                 RecipeDetailScreen(
                     recipe = currentRecipe,
                     onBackClick = {
-                        // 🚀 Само едноставно навигирај назад, без да допираш состојби!
                         navController.popBackStack()
                     }
                 )
@@ -315,10 +402,8 @@ fun NavigationGraph(navController: NavHostController, recipeDao: RecipeDao, isWi
                 }
             }
 
-            // 🕒 Паметно чистење дури ОТКАКО екранот целосно ќе исчезне од навигацијата
             DisposableEffect(Unit) {
                 onDispose {
-                    // Ако глобалната состојба се уште го чува овој рецепт, ја чистиме безбедно во позадина
                     if (selectedRecipeForDetail.title.isNotEmpty()) {
                         selectedRecipeForDetail = DetailRecipeView(
                             title = "",

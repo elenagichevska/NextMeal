@@ -4,9 +4,13 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
@@ -16,17 +20,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import coil.compose.AsyncImage
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.auth.userProfileChangeRequest
 import com.google.firebase.ktx.Firebase
-import androidx.core.net.toUri
 
 @Composable
-fun AuthScreen() {
+fun AuthScreen(
+    onGoogleSignIn: () -> Unit,      // Аction за Google најава
+    onFacebookSignIn: () -> Unit    // Action за Facebook најава
+) {
     val contentResolver = LocalContext.current.contentResolver
     val context = LocalContext.current
     val auth = Firebase.auth
@@ -35,10 +43,10 @@ fun AuthScreen() {
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var fullName by remember { mutableStateOf("") }
-    var profileImageUriString by remember { mutableStateOf("") } // 📸 За зачувување на патеката до сликата
+    var profileImageUriString by remember { mutableStateOf("") }
     var isRegisterMode by remember { mutableStateOf(false) }
 
-    // 📸 Лансер за избор на профилна слика од галерија
+    // Лансер за избор на профилна слика од галерија
     val profileImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
@@ -54,7 +62,10 @@ fun AuthScreen() {
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()), // Спречува кршење на UI кога е отворена тастатурата
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -72,7 +83,7 @@ fun AuthScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 📸 Аватар / Слика за избор (Се прикажува само во Register Mode)
+        // Аватар / Слика за избор (Само во Register Mode)
         if (isRegisterMode) {
             Box(
                 modifier = Modifier
@@ -148,6 +159,7 @@ fun AuthScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // Копче за класична најава / регистрација со е-маил
         Button(
             onClick = {
                 if (email.isNotEmpty() && password.isNotEmpty()) {
@@ -163,7 +175,6 @@ fun AuthScreen() {
                         auth.createUserWithEmailAndPassword(email, password)
                             .addOnCompleteListener { task ->
                                 if (task.isSuccessful) {
-                                    // 🚀 Ги зачувуваме и името и сликата (доколку корисникот избрал) во Firebase профилот
                                     val profileUpdates = userProfileChangeRequest {
                                         displayName = fullName
                                         if (profileImageUriString.isNotEmpty()) {
@@ -192,15 +203,129 @@ fun AuthScreen() {
                     Toast.makeText(context, "Fill in all the boxes!", Toast.LENGTH_SHORT).show()
                 }
             },
-            modifier = Modifier.fillMaxWidth().height(50.dp)
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            shape = RoundedCornerShape(12.dp)
         ) {
-            Text(if (isRegisterMode) "Register" else "Log In")
+            Text(if (isRegisterMode) "Register with Email" else "Log In with Email")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         TextButton(onClick = { isRegisterMode = !isRegisterMode }) {
             Text(if (isRegisterMode) "Already have a profile? Log in!" else "Don't have a profile? Register here!")
+        }
+
+        // --- ЛИНИЈА ЗА ПОДЕЛБА НА СОЦИЈАЛНИ МРЕЖИ ---
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
+            Text(
+                text = " OR CONNECT WITH ",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
+            HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
+        }
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // 🌟 КОПЧИЊАТА ЕДНО ДО ДРУГО (СПАКУВАНИ ВО ROW)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // --- ГУГЛ НАЈАВА ---
+            OutlinedButton(
+                onClick = { onGoogleSignIn() }, // Сега ја активира вистинската Google најава
+                modifier = Modifier.weight(1f).height(50.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_google),
+                        contentDescription = "Google Logo",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Google", fontWeight = FontWeight.Medium)
+                }
+            }
+
+            // --- ФЕЈСБУК НАЈАВА ---
+            OutlinedButton(
+                onClick = { onFacebookSignIn() }, // Сега ја активира вистинската Facebook најава
+                modifier = Modifier.weight(1f).height(50.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_facebook),
+                        contentDescription = "Facebook Logo",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Facebook", fontWeight = FontWeight.Medium)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+            Text(
+                text = " Don't want an account yet? ",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
+            HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+        }
+        Spacer(modifier = Modifier.height(20.dp))
+
+        ElevatedButton(
+            onClick = {
+                auth.signInAnonymously()
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            Toast.makeText(context, "Logged in as Guest!", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "Guest login failed: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                        }
+                    }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.elevatedButtonColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Browse as Guest",
+                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
         }
     }
 }

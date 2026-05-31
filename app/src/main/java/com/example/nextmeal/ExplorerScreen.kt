@@ -1,5 +1,6 @@
 package com.example.nextmeal
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,10 +16,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.google.firebase.auth.auth // 🚀 Точниот импорт за auth кој ја решава грешката
+import com.google.firebase.Firebase
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -26,18 +31,20 @@ import kotlinx.coroutines.launch
 fun ExplorerScreen(
     localRecipes: List<LocalRecipe>,
     publicRecipes: List<Recipe>,
-    apiSuggestions: List<ApiMeal>,         // Се користи точно ова од MainActivity
-    randomKeyword: String,                  // Се користи точно ова од MainActivity
-    isSuggestionsLoading: Boolean,          // Се користи точно ова од MainActivity
+    apiSuggestions: List<ApiMeal>,
+    randomKeyword: String,
+    isSuggestionsLoading: Boolean,
     onRecipeClick: (DetailRecipeView) -> Unit
 ) {
+    val context = LocalContext.current
     var searchQuery by rememberSaveable { mutableStateOf("") }
     val apiResults = remember { mutableStateListOf<ApiMeal>() }
     val coroutineScope = rememberCoroutineScope()
     var isLoading by rememberSaveable { mutableStateOf(false) }
     var isSearchingActive by rememberSaveable { mutableStateOf(false) }
 
-    // 🚀 СИТЕ ДУПЛИРАНИ ЛОКАЛНИ RANDOM ПРОМЕНЛИВИ И LAUNCHEDEFFECT СЕ ЦЕЛОСНО ИЗБРИШАНИ ОД ТУКА!
+    // Проверка за Анонимен Гост
+    val isAnonymous = Firebase.auth.currentUser?.isAnonymous == true
 
     Column(modifier = Modifier.padding(16.dp).fillMaxSize()) {
         Text("Explore Recipes", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
@@ -80,7 +87,12 @@ fun ExplorerScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            if (isSuggestionsLoading && apiResults.isEmpty() && apiSuggestions.isEmpty()) {
+            // 🔄 Искористување на isLoading: Прикажуваме анимација додека се пребарува на интернет
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                }
+            } else if (isSuggestionsLoading && apiResults.isEmpty() && apiSuggestions.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
@@ -120,7 +132,7 @@ fun ExplorerScreen(
                             }
                         }
                     } else {
-                        // 🌟 1. Дневна инспирација
+                        // 1. Дневна инспирација
                         item {
                             Text("Daily Culinary Inspiration 💫", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.height(8.dp))
@@ -160,7 +172,7 @@ fun ExplorerScreen(
 
                         item { Spacer(modifier = Modifier.height(20.dp)) }
 
-                        // 👥 2. Популарни од заедницата
+                        // 2. Популарни од заедницата
                         item {
                             Text("Popular from Community 🌍", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.height(8.dp))
@@ -207,13 +219,49 @@ fun ExplorerScreen(
 
                         item { Spacer(modifier = Modifier.height(20.dp)) }
 
-                        // 🍳 3. Мои лични рецепти
+                        // 3. Мои лични рецепти (Со проверка за анонимен гост)
                         item {
                             Text("My Kitchen Masterpieces 👩‍🍳", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.height(8.dp))
                         }
 
-                        if (localRecipes.isEmpty()) {
+                        if (isAnonymous) {
+                            item {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(16.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            text = "Your digital kitchen is locked! 🔒",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            text = "To create and view your personal recipes, please log in or register a full account.",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                            textAlign = TextAlign.Center
+                                        )
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Button(
+                                            onClick = {
+                                                Firebase.auth.signOut()
+                                                Toast.makeText(context, "Redirecting to Authentication...", Toast.LENGTH_SHORT).show()
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                                        ) {
+                                            Text("Log In / Register 🍳")
+                                        }
+                                    }
+                                }
+                            }
+                        } else if (localRecipes.isEmpty()) {
                             item {
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),

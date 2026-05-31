@@ -12,7 +12,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
@@ -49,11 +48,14 @@ fun ProfileScreen(
 
     // 👤 Состојби за Firebase профилот на корисникот
     val currentUser = Firebase.auth.currentUser
+
+    // 🌟 КЛУЧНА ПРОВЕРКА: Дали корисникот е Анонимен (Гост)?
+    val isAnonymous = currentUser?.isAnonymous == true
+
     var currentUserName by remember { mutableStateOf(currentUser?.displayName ?: "User") }
     val currentEmail = currentUser?.email ?: ""
     val currentUid = currentUser?.uid ?: ""
 
-    // Се справуваме со профилната слика од Firebase (ако ја има)
     var profileImageUriString by remember { mutableStateOf(currentUser?.photoUrl?.toString() ?: "") }
 
     // Контрола на екрани
@@ -71,15 +73,13 @@ fun ProfileScreen(
     var imageUriString by rememberSaveable { mutableStateOf("") }
     var isPublicChecked by rememberSaveable { mutableStateOf(false) }
 
-    // Режим на уредување (Edit Mode) за рецепти
     var isEditMode by rememberSaveable { mutableStateOf(false) }
     var editingRecipeId by rememberSaveable { mutableStateOf<Int?>(null) }
 
-    // Дијалози за потврда
     var recipeToDelete by remember { mutableStateOf<LocalRecipe?>(null) }
     var showDeleteAccountDialog by remember { mutableStateOf(false) }
 
-    // 📸 Лансер за слика на рецепт
+    // Лансери за слики
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
@@ -94,7 +94,6 @@ fun ProfileScreen(
         }
     }
 
-    // 📸 Лансер за профилна слика
     val profileImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
@@ -109,7 +108,7 @@ fun ProfileScreen(
         }
     }
 
-    // 🗑️ ДИЈАЛОГ ЗА БРИШЕЊЕ РЕЦЕПТА
+    // Дијалози за потврда
     if (recipeToDelete != null) {
         AlertDialog(
             onDismissRequest = { recipeToDelete = null },
@@ -143,7 +142,6 @@ fun ProfileScreen(
         )
     }
 
-    // 🛑 ДИЈАЛОГ ЗА БРИШЕЊЕ ПРОФИЛ
     if (showDeleteAccountDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteAccountDialog = false },
@@ -167,9 +165,62 @@ fun ProfileScreen(
         )
     }
 
-    // 🔀 ПРИКАЗ НА ЕКРАНИТЕ
-    if (isEditingProfile) {
-        // --- ✏️ ЕКРАН ЗА ЕДИТ НА ПРОФИЛ ---
+    // 🔀 МЕНАЏИРАЊЕ НА ЕКРАНИТЕ И РЕСТРИКЦИИТЕ
+    if (isAnonymous) {
+        // --- 🧑‍🍳 ЕКРАН ЗА ГОСТ (ANONYMOUS) ---
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Surface(
+                modifier = Modifier.size(100.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.secondaryContainer
+            ) {
+                Icon(
+                    Icons.Default.Person,
+                    contentDescription = "Guest",
+                    modifier = Modifier.size(64.dp).padding(16.dp),
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "You are browsing as a Guest 🍽️",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Create a profile or log in to unleash full features like adding your own recipes and custom profiles!",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.outline,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Button(
+                onClick = {
+                    Firebase.auth.signOut() // Го одјавуваме анонимниот гост, со што автоматски се отвора AuthScreen
+                    Toast.makeText(context, "Redirecting to Login...", Toast.LENGTH_SHORT).show()
+                },
+                modifier = Modifier.fillMaxWidth().height(50.dp)
+            ) {
+                Text("Sign In / Create Account 🍳")
+            }
+        }
+    } else if (isEditingProfile) {
+        // --- ✏️ ЕКРАН ЗА ЕДИТ НА ПРОФИЛ (СТАНДАРДЕН КОРИСНИК) ---
         Column(modifier = Modifier.padding(16.dp).fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { isEditingProfile = false }) {
@@ -180,7 +231,6 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Интерактивна профилна слика во Едит режим
             Box(
                 modifier = Modifier
                     .size(120.dp)
@@ -202,7 +252,7 @@ fun ProfileScreen(
                 }
                 Surface(
                     modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).height(30.dp),
-                    color = MaterialTheme.colorScheme.blackWithAlpha // Засенчување за текст
+                    color = MaterialTheme.colorScheme.blackWithAlpha
                 ) {
                     Text("CHANGE", style = MaterialTheme.typography.labelSmall, color = androidx.compose.ui.graphics.Color.White, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 6.dp))
                 }
@@ -244,9 +294,8 @@ fun ProfileScreen(
                 Text("Save Changes")
             }
 
-            Spacer(modifier = Modifier.weight(1f)) // Турка сè на дното
+            Spacer(modifier = Modifier.weight(1f))
 
-            // 🛑 БРИШЕЊЕ НА ПРОФИЛ НА ДНОТО
             TextButton(
                 onClick = { showDeleteAccountDialog = true },
                 colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
@@ -258,7 +307,7 @@ fun ProfileScreen(
             }
         }
     } else {
-        // --- 🏠 ГЛАВЕН ПРОФИЛ ЕКРАН (РЕЦЕПТИ) ---
+        // --- 🏠 ГЛАВЕН ПРОФИЛ ЕКРАН ЗА РЕЦЕПТИ (СТАНДАРДЕН КОРИСНИК) ---
         Column(modifier = Modifier.padding(16.dp).fillMaxSize()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -266,7 +315,6 @@ fun ProfileScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // 📸 КЛИКАБИЛНА ПРОФИЛНА СЛИКА НАМЕСТО СЕТИНГС
                     Box(
                         modifier = Modifier
                             .size(55.dp)
@@ -352,7 +400,6 @@ fun ProfileScreen(
                                         }
                                     }
 
-                                    // ✏️ ЕДИТ ИКОНА
                                     IconButton(onClick = {
                                         isEditMode = true
                                         editingRecipeId = local.id
@@ -366,7 +413,6 @@ fun ProfileScreen(
                                         Icon(Icons.Default.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.secondary)
                                     }
 
-                                    // 🗑️ БРИШЕЊЕ ИКОНА
                                     IconButton(onClick = { recipeToDelete = local }) {
                                         Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
                                     }
@@ -520,6 +566,5 @@ fun ProfileScreen(
     }
 }
 
-// Помошна екстензија за бојата за текстот "CHANGE" на сликата
 val androidx.compose.material3.ColorScheme.blackWithAlpha: androidx.compose.ui.graphics.Color
     get() = androidx.compose.ui.graphics.Color(0x66000000)
