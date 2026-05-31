@@ -29,10 +29,11 @@ import coil.compose.AsyncImage
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.auth.userProfileChangeRequest
 import com.google.firebase.ktx.Firebase
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun AuthScreen(
-    onGoogleSignIn: () -> Unit,      // Аction за Google најава
+    onGoogleSignIn: () -> Unit,      // Action за Google најава
     onFacebookSignIn: () -> Unit    // Action за Facebook најава
 ) {
     val contentResolver = LocalContext.current.contentResolver
@@ -45,6 +46,15 @@ fun AuthScreen(
     var fullName by remember { mutableStateOf("") }
     var profileImageUriString by remember { mutableStateOf("") }
     var isRegisterMode by remember { mutableStateOf(false) }
+
+    // Локализирани Toast пораки за користење внатре во onClick
+    val msgEnterName = stringResource(id = R.string.toast_enter_name)
+    val msgPasswordsMatch = stringResource(id = R.string.toast_passwords_dont_match)
+    val msgSignUpSuccess = stringResource(id = R.string.toast_signup_success)
+    val msgLoginSuccess = stringResource(id = R.string.toast_login_success)
+    val msgLoginError = stringResource(id = R.string.toast_login_error)
+    val msgFillAllFields = stringResource(id = R.string.toast_fill_all_fields)
+    val msgGuestLoginSuccess = stringResource(id = R.string.toast_guest_login_success)
 
     // Лансер за избор на профилна слика од галерија
     val profileImageLauncher = rememberLauncherForActivityResult(
@@ -70,13 +80,13 @@ fun AuthScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = if (isRegisterMode) "Create Profile 🍳" else "Welcome to NextMeal 🍽️",
+            text = if (isRegisterMode) stringResource(id = R.string.auth_title_register) else stringResource(id = R.string.auth_title_login),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = if (isRegisterMode) "Fill in your details below" else "Sign in to view the fridge",
+            text = if (isRegisterMode) stringResource(id = R.string.auth_subtitle_register) else stringResource(id = R.string.auth_subtitle_login),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.outline
         )
@@ -95,7 +105,7 @@ fun AuthScreen(
                 if (profileImageUriString.isNotEmpty()) {
                     AsyncImage(
                         model = profileImageUriString,
-                        contentDescription = "Selected Profile Image",
+                        contentDescription = stringResource(id = R.string.cd_profile_image),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
@@ -108,8 +118,8 @@ fun AuthScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            Icon(Icons.Default.Person, contentDescription = "Add Photo", modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                            Text("Add Photo", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                            Icon(Icons.Default.Person, contentDescription = stringResource(id = R.string.btn_add_photo), modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                            Text(stringResource(id = R.string.btn_add_photo), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
                         }
                     }
                 }
@@ -121,7 +131,7 @@ fun AuthScreen(
             OutlinedTextField(
                 value = fullName,
                 onValueChange = { fullName = it },
-                label = { Text("First Name and Last Name") },
+                label = { Text(stringResource(id = R.string.hint_full_name)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -131,7 +141,7 @@ fun AuthScreen(
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("E-mail") },
+            label = { Text(stringResource(id = R.string.email_hint)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
@@ -139,7 +149,7 @@ fun AuthScreen(
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("Password") },
+            label = { Text(stringResource(id = R.string.password_hint)) },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
@@ -150,7 +160,7 @@ fun AuthScreen(
             OutlinedTextField(
                 value = confirmPassword,
                 onValueChange = { confirmPassword = it },
-                label = { Text("Confirm password") },
+                label = { Text(stringResource(id = R.string.hint_confirm_password)) },
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
@@ -165,11 +175,11 @@ fun AuthScreen(
                 if (email.isNotEmpty() && password.isNotEmpty()) {
                     if (isRegisterMode) {
                         if (fullName.isEmpty()) {
-                            Toast.makeText(context, "Enter your name!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, msgEnterName, Toast.LENGTH_SHORT).show()
                             return@Button
                         }
                         if (password != confirmPassword) {
-                            Toast.makeText(context, "Passwords don't match up!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, msgPasswordsMatch, Toast.LENGTH_SHORT).show()
                             return@Button
                         }
                         auth.createUserWithEmailAndPassword(email, password)
@@ -183,7 +193,7 @@ fun AuthScreen(
                                     }
                                     auth.currentUser?.updateProfile(profileUpdates)
                                         ?.addOnCompleteListener {
-                                            Toast.makeText(context, "Sign up successful, welcome!", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, msgSignUpSuccess, Toast.LENGTH_SHORT).show()
                                         }
                                 } else {
                                     Toast.makeText(context, "Error: ${task.exception?.message}", Toast.LENGTH_LONG).show()
@@ -193,26 +203,26 @@ fun AuthScreen(
                         auth.signInWithEmailAndPassword(email, password)
                             .addOnCompleteListener { task ->
                                 if (task.isSuccessful) {
-                                    Toast.makeText(context, "Log in successful!", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, msgLoginSuccess, Toast.LENGTH_SHORT).show()
                                 } else {
-                                    Toast.makeText(context, "Error in log in - please check again.", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, msgLoginError, Toast.LENGTH_LONG).show()
                                 }
                             }
                     }
                 } else {
-                    Toast.makeText(context, "Fill in all the boxes!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, msgFillAllFields, Toast.LENGTH_SHORT).show()
                 }
             },
             modifier = Modifier.fillMaxWidth().height(50.dp),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text(if (isRegisterMode) "Register with Email" else "Log In with Email")
+            Text(if (isRegisterMode) stringResource(id = R.string.btn_register_email) else stringResource(id = R.string.btn_login_email))
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         TextButton(onClick = { isRegisterMode = !isRegisterMode }) {
-            Text(if (isRegisterMode) "Already have a profile? Log in!" else "Don't have a profile? Register here!")
+            Text(if (isRegisterMode) stringResource(id = R.string.switch_to_login) else stringResource(id = R.string.switch_to_register))
         }
 
         // --- ЛИНИЈА ЗА ПОДЕЛБА НА СОЦИЈАЛНИ МРЕЖИ ---
@@ -223,7 +233,7 @@ fun AuthScreen(
         ) {
             HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
             Text(
-                text = " OR CONNECT WITH ",
+                text = stringResource(id = R.string.or_connect_with),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.padding(horizontal = 8.dp)
@@ -239,7 +249,7 @@ fun AuthScreen(
         ) {
             // --- ГУГЛ НАЈАВА ---
             OutlinedButton(
-                onClick = { onGoogleSignIn() }, // Сега ја активира вистинската Google најава
+                onClick = { onGoogleSignIn() },
                 modifier = Modifier.weight(1f).height(50.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
@@ -250,17 +260,17 @@ fun AuthScreen(
                 ) {
                     Image(
                         painter = painterResource(id = R.drawable.ic_google),
-                        contentDescription = "Google Logo",
+                        contentDescription = stringResource(id = R.string.cd_google_logo),
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Google", fontWeight = FontWeight.Medium)
+                    Text(stringResource(id = R.string.google_sign_in), fontWeight = FontWeight.Medium)
                 }
             }
 
             // --- ФЕЈСБУК НАЈАВА ---
             OutlinedButton(
-                onClick = { onFacebookSignIn() }, // Сега ја активира вистинската Facebook најава
+                onClick = { onFacebookSignIn() },
                 modifier = Modifier.weight(1f).height(50.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
@@ -271,11 +281,11 @@ fun AuthScreen(
                 ) {
                     Image(
                         painter = painterResource(id = R.drawable.ic_facebook),
-                        contentDescription = "Facebook Logo",
+                        contentDescription = stringResource(id = R.string.cd_facebook_logo),
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Facebook", fontWeight = FontWeight.Medium)
+                    Text(stringResource(id = R.string.facebook_sign_in), fontWeight = FontWeight.Medium)
                 }
             }
         }
@@ -287,7 +297,7 @@ fun AuthScreen(
         ) {
             HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
             Text(
-                text = " Don't want an account yet? ",
+                text = stringResource(id = R.string.divider_guest_notice),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.padding(horizontal = 8.dp)
@@ -301,7 +311,7 @@ fun AuthScreen(
                 auth.signInAnonymously()
                     .addOnCompleteListener { task ->
                         if (task.isSuccessful) {
-                            Toast.makeText(context, "Logged in as Guest!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, msgGuestLoginSuccess, Toast.LENGTH_SHORT).show()
                         } else {
                             Toast.makeText(context, "Guest login failed: ${task.exception?.message}", Toast.LENGTH_LONG).show()
                         }
@@ -321,7 +331,7 @@ fun AuthScreen(
                 horizontalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "Browse as Guest",
+                    text = stringResource(id = R.string.btn_anonymous),
                     fontWeight = FontWeight.SemiBold,
                     style = MaterialTheme.typography.bodyLarge
                 )

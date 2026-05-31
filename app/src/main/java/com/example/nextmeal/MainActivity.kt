@@ -32,10 +32,12 @@ import androidx.compose.runtime.saveable.mapSaver
 import androidx.compose.ui.unit.dp
 import java.util.Calendar
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.compose.ui.res.stringResource
 
 // МИНИМАЛНИ И НАЈСТАБИЛНИ ИМПОРТИ ЗА GOOGLE И FACEBOOK
 import com.facebook.CallbackManager
@@ -53,6 +55,7 @@ class MainActivity : ComponentActivity() {
 
     private val callbackManager = CallbackManager.Factory.create()
 
+    @SuppressLint("StringFormatInvalid")
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -97,11 +100,13 @@ class MainActivity : ComponentActivity() {
                                 auth.signInWithCredential(credential)
                                     .addOnCompleteListener { authTask ->
                                         if (authTask.isSuccessful) {
-                                            Toast.makeText(this, "Welcome ${account.displayName}!", Toast.LENGTH_SHORT).show()
+                                            val welcomeMsg = getString(R.string.toast_welcome_user, account.displayName ?: "")
+                                            Toast.makeText(this, welcomeMsg, Toast.LENGTH_SHORT).show()
                                         }
                                     }
                             } catch (e: ApiException) {
-                                Toast.makeText(this, "Google Failed: ${e.message}", Toast.LENGTH_LONG).show()
+                                val failMsg = getString(R.string.toast_google_failed, e.message ?: "")
+                                Toast.makeText(this, failMsg, Toast.LENGTH_LONG).show()
                             }
                         }
                     }
@@ -124,15 +129,16 @@ class MainActivity : ComponentActivity() {
                                 auth.signInWithCredential(credential)
                                     .addOnCompleteListener { authTask ->
                                         if (authTask.isSuccessful) {
-                                            Toast.makeText(this@MainActivity, "Facebook Login Successful!", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(this@MainActivity, getString(R.string.toast_facebook_success), Toast.LENGTH_SHORT).show()
                                         }
                                     }
                             }
                             override fun onCancel() {
-                                Toast.makeText(this@MainActivity, "Facebook Login Cancelled", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this@MainActivity, getString(R.string.toast_facebook_cancelled), Toast.LENGTH_SHORT).show()
                             }
                             override fun onError(error: FacebookException) {
-                                Toast.makeText(this@MainActivity, "Facebook Error: ${error.message}", Toast.LENGTH_LONG).show()
+                                val errMsg = getString(R.string.toast_facebook_error, error.message ?: "")
+                                Toast.makeText(this@MainActivity, errMsg, Toast.LENGTH_LONG).show()
                             }
                         })
                     }
@@ -169,12 +175,10 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// Останатиот дел од кодот (Screens, Layouts, NavigationGraph) си останува апсолутно ист...
-
-sealed class Screen(val route: String, val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    object SmartSearch : Screen("smart_search", "Fridge", Icons.Default.Search)
-    object Explorer : Screen("explorer", "Explore", Icons.AutoMirrored.Filled.List)
-    object Profile : Screen("profile", "Profile", Icons.Default.Person)
+sealed class Screen(val route: String, val titleResId: Int, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    object SmartSearch : Screen("smart_search", R.string.nav_smart_search, Icons.Default.Search)
+    object Explorer : Screen("explorer", R.string.nav_explorer, Icons.AutoMirrored.Filled.List)
+    object Profile : Screen("profile", R.string.nav_profile, Icons.Default.Person)
 }
 
 @Composable
@@ -192,9 +196,10 @@ fun MainAppLayout(
             NavigationRail {
                 Spacer(modifier = Modifier.weight(1f))
                 items.forEach { screen ->
+                    val localizedTitle = stringResource(id = screen.titleResId)
                     NavigationRailItem(
-                        icon = { Icon(screen.icon, contentDescription = screen.title) },
-                        label = { Text(screen.title) },
+                        icon = { Icon(screen.icon, contentDescription = localizedTitle) },
+                        label = { Text(localizedTitle) },
                         selected = currentRoute == screen.route,
                         onClick = {
                             navController.navigate(screen.route) {
@@ -216,9 +221,10 @@ fun MainAppLayout(
             bottomBar = {
                 NavigationBar {
                     items.forEach { screen ->
+                        val localizedTitle = stringResource(id = screen.titleResId)
                         NavigationBarItem(
-                            icon = { Icon(screen.icon, contentDescription = screen.title) },
-                            label = { Text(screen.title) },
+                            icon = { Icon(screen.icon, contentDescription = localizedTitle) },
+                            label = { Text(localizedTitle) },
                             selected = currentRoute == screen.route,
                             onClick = {
                                 navController.navigate(screen.route) {
@@ -288,6 +294,8 @@ fun NavigationGraph(navController: NavHostController, recipeDao: RecipeDao, isWi
     val globalApiSuggestions = remember { mutableStateListOf<ApiMeal>() }
     var globalIsExplorerLoading by remember { mutableStateOf(true) }
 
+    val defaultInstructions = stringResource(id = R.string.error_no_instructions)
+
     LaunchedEffect(globalRandomKeyword) {
         if (globalApiSuggestions.isEmpty()) {
             globalIsExplorerLoading = true
@@ -355,7 +363,7 @@ fun NavigationGraph(navController: NavHostController, recipeDao: RecipeDao, isWi
 
                                         selectedRecipeForDetail = detailView.copy(
                                             instructions = fullMeal.strInstructions
-                                                ?: "No detailed instructions found.",
+                                                ?: defaultInstructions,
                                             ingredients = compiledIngredients
                                         )
                                     } else {

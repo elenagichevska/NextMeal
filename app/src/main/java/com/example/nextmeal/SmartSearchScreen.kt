@@ -13,11 +13,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import androidx.compose.ui.res.stringResource
 
-// 1. Помошни дата класи потребни за рангирањето
+// 1. Помошни дата класи за рангирање
 data class RankedCustomRecipe(
     val title: String,
     val allIngredientsString: String,
@@ -37,7 +39,7 @@ data class RankedApiRecipe(
     val missingIngredients: List<String>
 )
 
-// 2. Логика за обработка и рангирање на состојките
+// 2. Логика за обработка и рангирање (работи со англиските стрингови во позадина)
 fun processAndRankRecipes(
     rawIngredients: String,
     title: String,
@@ -69,7 +71,7 @@ fun processAndRankRecipes(
     return RankedCustomRecipe(title, rawIngredients, matched.size, missing, source, imageUrl, instructions)
 }
 
-// 3. Главниот екран како независна компонента
+// 3. Главен екран
 @Composable
 fun SmartSearchScreen(
     localRecipes: List<LocalRecipe>,
@@ -80,17 +82,26 @@ fun SmartSearchScreen(
     onHasSearchedChange: (Boolean) -> Unit,
     onRecipeClick: (DetailRecipeView) -> Unit
 ) {
-    val groupedIngredients = remember { IngredientsData.list.groupBy { it.category } }
+    val context = LocalContext.current
+
+    // ДИНАМИЧКО ГРУПИРАЊЕ: Ги зема преведените имиња на категориите од strings.xml
+    val groupedIngredients = remember(IngredientsData.list) {
+        IngredientsData.list.groupBy { context.getString(it.categoryRes) }
+    }
 
     val apiResults = remember { mutableStateListOf<RankedApiRecipe>() }
     val matchedCustomResults = remember { mutableStateListOf<RankedCustomRecipe>() }
     var isLoading by remember { mutableStateOf(false) }
 
+    val sourceLocal = stringResource(id = R.string.source_label_local)
+    val sourceShared = stringResource(id = R.string.source_label_shared)
+    val sourceGlobalApi = stringResource(id = R.string.source_label_global_api)
+
     LaunchedEffect(hasSearched, localRecipes, publicRecipes, selectedIngredients) {
         if (hasSearched && selectedIngredients.isNotEmpty()) {
 
             val localMapped = localRecipes.mapNotNull {
-                processAndRankRecipes(it.ingredients, it.title, "My Kitchen (Local)", it.imageUrl, it.instructions, selectedIngredients)
+                processAndRankRecipes(it.ingredients, it.title, sourceLocal, it.imageUrl, it.instructions, selectedIngredients)
             }
 
             val filteredPublicRecipes = publicRecipes.filter { pub ->
@@ -98,7 +109,7 @@ fun SmartSearchScreen(
             }
 
             val publicMapped = filteredPublicRecipes.mapNotNull {
-                processAndRankRecipes(it.ingredients, it.title, "Community (Shared)", it.imageUrl, it.instructions, selectedIngredients)
+                processAndRankRecipes(it.ingredients, it.title, sourceShared, it.imageUrl, it.instructions, selectedIngredients)
             }
 
             matchedCustomResults.clear()
@@ -112,6 +123,7 @@ fun SmartSearchScreen(
             if (apiResults.isEmpty()) {
                 isLoading = true
                 try {
+                    // И понатаму го земаме англиското име ("chicken") за пребарување во API
                     val mainIngredient = selectedIngredients.firstOrNull() ?: ""
                     if (mainIngredient.isNotEmpty()) {
                         val response = MealApiService.instance.getMealsByIngredient(mainIngredient.lowercase())
@@ -127,7 +139,7 @@ fun SmartSearchScreen(
                                         val ingredientsString = fullMeal.getFormattedIngredients()
 
                                         val rankedHelper = processAndRankRecipes(
-                                            ingredientsString, fullMeal.strMeal, "Global API",
+                                            ingredientsString, fullMeal.strMeal, sourceGlobalApi,
                                             fullMeal.strMealThumb, fullMeal.strInstructions ?: "", selectedIngredients
                                         )
 
@@ -155,23 +167,25 @@ fun SmartSearchScreen(
 
     Column(modifier = Modifier.padding(16.dp)) {
         if (!hasSearched) {
-            Text("My Fridge", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(stringResource(id = R.string.fridge_screen_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(6.dp))
-            Text("Check what ingredients you have at home right now:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+            Text(stringResource(id = R.string.fridge_screen_subtitle), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
             Spacer(modifier = Modifier.height(16.dp))
 
             LazyColumn(modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()) {
-                groupedIngredients.forEach { (category, ingredients) ->
+                groupedIngredients.forEach { (categoryName, ingredients) ->
                     item {
-                        Text(text = category, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 8.dp))
+                        // Приказ на преведената категорија
+                        Text(text = categoryName, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 8.dp))
                     }
                     this.items(items = ingredients) { ingredient ->
                         Row(modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(
+                                // Се проверува и зачувува преку чистиот англиски стринг ("chicken") во позадина
                                 checked = selectedIngredients.contains(ingredient.name),
                                 onCheckedChange = { isChecked ->
                                     val currentSet = selectedIngredients.toMutableSet()
@@ -181,10 +195,13 @@ fun SmartSearchScreen(
                                 }
                             )
                             Spacer(modifier = Modifier.width(8.dp))
+
+                            // ДИНАМИЧКИ ПРЕВОД: Се прикажува локализираното име од ресурсите
                             Text(
-                                text = "${ingredient.name.replaceFirstChar { it.uppercase() }}  ${ingredient.emoji}",
+                                text = "${stringResource(id = ingredient.nameRes)}  ${ingredient.emoji}",
                                 style = MaterialTheme.typography.bodyLarge
-                            )}
+                            )
+                        }
                     }
                 }
             }
@@ -197,7 +214,7 @@ fun SmartSearchScreen(
                     enabled = selectedIngredients.isNotEmpty(),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("CLEAR ALL")
+                    Text(stringResource(id = R.string.btn_clear_all))
                 }
 
                 Button(
@@ -207,10 +224,11 @@ fun SmartSearchScreen(
                         .height(50.dp),
                     enabled = selectedIngredients.isNotEmpty()
                 ) {
-                    Text("FIND RECIPES (${selectedIngredients.size})")
+                    Text(stringResource(id = R.string.btn_find_recipes, selectedIngredients.size))
                 }
             }
         } else {
+            // Резултати од пребарувањето (Останува идентично и оптимизирано)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -222,11 +240,13 @@ fun SmartSearchScreen(
                         apiResults.clear()
                         onHasSearchedChange(false)
                     },
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier
+                        .size(40.dp)
+                        .align(Alignment.CenterVertically)
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
+                        contentDescription = stringResource(id = R.string.cd_back_button),
                         tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
@@ -234,7 +254,7 @@ fun SmartSearchScreen(
                 Spacer(modifier = Modifier.width(8.dp))
 
                 Text(
-                    text = "Search Results",
+                    text = stringResource(id = R.string.search_results_main_title),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
@@ -249,10 +269,10 @@ fun SmartSearchScreen(
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     if (matchedCustomResults.isNotEmpty()) {
                         item {
-                            Text("Your and shared recipes with these ingredients:", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 8.dp))
+                            Text(stringResource(id = R.string.section_matched_custom_recipes), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 8.dp))
                         }
                         this.items(items = matchedCustomResults) { ranked ->
-                            val containerColor = if (ranked.source.contains("Local")) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                            val containerColor = if (ranked.source == sourceLocal) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -292,12 +312,12 @@ fun SmartSearchScreen(
                                             Text(ranked.source, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                                         }
                                         Spacer(modifier = Modifier.height(4.dp))
-                                        Text("Ingredients: ${ranked.allIngredientsString}", style = MaterialTheme.typography.bodyMedium)
+                                        Text(stringResource(id = R.string.label_ingredients_list, ranked.allIngredientsString), style = MaterialTheme.typography.bodyMedium)
                                         Spacer(modifier = Modifier.height(4.dp))
                                         if (ranked.missingIngredients.isEmpty()) {
-                                            Text("✓ You have all ingredients!", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                                            Text(stringResource(id = R.string.label_all_ingredients_owned), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                                         } else {
-                                            Text("⚠ Missing: ${ranked.missingIngredients.joinToString(", ")}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                                            Text(stringResource(id = R.string.label_missing_ingredients_list, ranked.missingIngredients.joinToString(", ")), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                                         }
                                     }
                                 }
@@ -308,7 +328,7 @@ fun SmartSearchScreen(
 
                     if (apiResults.isNotEmpty()) {
                         item {
-                            Text("Inspiration from Global API:", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(vertical = 8.dp))
+                            Text(stringResource(id = R.string.section_global_api_inspiration), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(vertical = 8.dp))
                         }
                         this.items(items = apiResults) { rankedApi ->
                             Card(
@@ -323,7 +343,7 @@ fun SmartSearchScreen(
                                                 imageUrl = rankedApi.imageUrl,
                                                 ingredients = rankedApi.allIngredientsString,
                                                 instructions = rankedApi.instructions,
-                                                source = "Global API"
+                                                source = sourceGlobalApi
                                             )
                                         )
                                     }
@@ -343,16 +363,16 @@ fun SmartSearchScreen(
                                     Column(modifier = Modifier.weight(1f)) {
                                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                             Text(rankedApi.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                            Text("Global API", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                                            Text(sourceGlobalApi, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
                                         }
                                         Spacer(modifier = Modifier.height(4.dp))
-                                        Text("Ingredients: ${rankedApi.allIngredientsString}", style = MaterialTheme.typography.bodyMedium, maxLines = 2)
+                                        Text(stringResource(id = R.string.label_ingredients_list, rankedApi.allIngredientsString), style = MaterialTheme.typography.bodyMedium, maxLines = 2)
                                         Spacer(modifier = Modifier.height(4.dp))
 
                                         if (rankedApi.missingIngredients.isEmpty()) {
-                                            Text("✓ You have all ingredients!", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                                            Text(stringResource(id = R.string.label_all_ingredients_owned), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                                         } else {
-                                            Text("⚠ Missing: ${rankedApi.missingIngredients.joinToString(", ")}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                                            Text(stringResource(id = R.string.label_missing_ingredients_list, rankedApi.missingIngredients.joinToString(", ")), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                                         }
                                     }
                                 }
@@ -362,7 +382,7 @@ fun SmartSearchScreen(
 
                     if (matchedCustomResults.isEmpty() && apiResults.isEmpty()) {
                         item {
-                            Text("No recipes found.", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(16.dp))
+                            Text(stringResource(id = R.string.error_no_recipes_found), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(16.dp))
                         }
                     }
                 }

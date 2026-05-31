@@ -18,6 +18,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import androidx.compose.ui.res.stringResource
 
 // 1. УНИВЕРЗАЛЕН МОДЕЛ
 data class DetailRecipeView(
@@ -38,10 +39,10 @@ fun RecipeDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Recipe Details", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(id = R.string.detail_screen_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(id = R.string.cd_back_button))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -96,18 +97,18 @@ fun RecipeDetailScreen(
                                         .background(MaterialTheme.colorScheme.surfaceVariant),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text("🥘 No Image Available", style = MaterialTheme.typography.titleMedium)
+                                    Text(stringResource(id = R.string.label_no_image_placeholder), style = MaterialTheme.typography.titleMedium)
                                 }
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = recipe.title,
-                                style = MaterialTheme.typography.titleLarge, // Поправено!
+                                style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onBackground
                             )
                             Text(
-                                text = "Source: ${recipe.source}",
+                                text = stringResource(id = R.string.recipe_source_label, recipe.source),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.Medium
@@ -140,7 +141,7 @@ fun RecipeDetailScreen(
                                 .background(MaterialTheme.colorScheme.surfaceVariant),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("🥘 No Image Available", style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(id = R.string.label_no_image_placeholder), style = MaterialTheme.typography.titleMedium)
                         }
                     }
 
@@ -151,7 +152,7 @@ fun RecipeDetailScreen(
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "Source: ${recipe.source}",
+                        text = stringResource(id = R.string.recipe_source_label, recipe.source),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Medium
@@ -167,14 +168,14 @@ fun RecipeDetailScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Menu, contentDescription = "Instructions", tint = MaterialTheme.colorScheme.primary)
+                            Icon(Icons.Default.Menu, contentDescription = stringResource(id = R.string.label_instructions), tint = MaterialTheme.colorScheme.primary)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Instructions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(stringResource(id = R.string.label_instructions), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         }
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
 
                         Text(
-                            text = recipe.instructions.ifEmpty { "No detailed instructions provided for this recipe. Try experimenting with your favorite cooking techniques!" },
+                            text = recipe.instructions.ifEmpty { stringResource(id = R.string.fallback_no_instructions_provided) },
                             style = MaterialTheme.typography.bodyLarge,
                             lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.3
                         )
@@ -194,15 +195,15 @@ fun IngredientsCard(recipe: DetailRecipeView) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Ingredients", tint = MaterialTheme.colorScheme.primary)
+                Icon(Icons.AutoMirrored.Filled.List, contentDescription = stringResource(id = R.string.label_ingredients), tint = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Ingredients", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(id = R.string.label_ingredients), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
 
             val ingredientList = recipe.ingredients.split(",")
             if (ingredientList.all { it.trim().isEmpty() } || recipe.ingredients.isEmpty()) {
-                Text("No ingredients list available.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+                Text(stringResource(id = R.string.error_no_ingredients_list), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
             } else {
                 ingredientList.forEach { ing ->
                     if (ing.trim().isNotEmpty()) {

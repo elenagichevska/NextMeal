@@ -34,6 +34,8 @@ import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import androidx.core.net.toUri
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.Color
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,7 +54,8 @@ fun ProfileScreen(
     // 🌟 КЛУЧНА ПРОВЕРКА: Дали корисникот е Анонимен (Гост)?
     val isAnonymous = currentUser?.isAnonymous == true
 
-    var currentUserName by remember { mutableStateOf(currentUser?.displayName ?: "User") }
+    val defaultUserLabel = stringResource(id = R.string.default_username)
+    var currentUserName by remember { mutableStateOf(currentUser?.displayName ?: defaultUserLabel) }
     val currentEmail = currentUser?.email ?: ""
     val currentUid = currentUser?.uid ?: ""
 
@@ -78,6 +81,17 @@ fun ProfileScreen(
 
     var recipeToDelete by remember { mutableStateOf<LocalRecipe?>(null) }
     var showDeleteAccountDialog by remember { mutableStateOf(false) }
+
+    // Локализирани пораки за логика во onClick
+    val msgRecipeDeleted = stringResource(id = R.string.toast_recipe_deleted)
+    val msgAccountDeleted = stringResource(id = R.string.toast_account_deleted)
+    val msgProfileUpdated = stringResource(id = R.string.toast_profile_updated)
+    val msgProfileUpdateFailed = stringResource(id = R.string.toast_profile_update_failed)
+    val msgLoggedOut = stringResource(id = R.string.toast_logged_out)
+    val msgRecipeUpdated = stringResource(id = R.string.toast_recipe_updated)
+    val msgRecipeSaved = stringResource(id = R.string.toast_recipe_saved_success)
+    val msgFillRequiredRecipe = stringResource(id = R.string.toast_fill_title_ingredients)
+    val msgRedirectingLogin = stringResource(id = R.string.toast_redirecting_login)
 
     // Лансери за слики
     val galleryLauncher = rememberLauncherForActivityResult(
@@ -112,8 +126,8 @@ fun ProfileScreen(
     if (recipeToDelete != null) {
         AlertDialog(
             onDismissRequest = { recipeToDelete = null },
-            title = { Text("Delete Recipe?") },
-            text = { Text("Are you sure you want to permanently delete '${recipeToDelete?.title}'? This action cannot be undone.") },
+            title = { Text(stringResource(id = R.string.dialog_delete_recipe_title)) },
+            text = { Text(stringResource(id = R.string.dialog_delete_recipe_text, recipeToDelete?.title ?: "")) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -132,36 +146,36 @@ fun ProfileScreen(
                                         }
                                     }
                             }
-                            Toast.makeText(context, "Recipe deleted successfully!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, msgRecipeDeleted, Toast.LENGTH_SHORT).show()
                         }
                         recipeToDelete = null
                     }
-                ) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                ) { Text(stringResource(id = R.string.btn_delete), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { recipeToDelete = null }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { recipeToDelete = null }) { Text(stringResource(id = R.string.btn_cancel)) } }
         )
     }
 
     if (showDeleteAccountDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteAccountDialog = false },
-            title = { Text("Delete Account?") },
-            text = { Text("Are you absolutely sure you want to delete your profile? All data will be wiped out permanently.") },
+            title = { Text(stringResource(id = R.string.dialog_delete_account_title)) },
+            text = { Text(stringResource(id = R.string.dialog_delete_account_text)) },
             confirmButton = {
                 TextButton(
                     onClick = {
                         showDeleteAccountDialog = false
                         Firebase.auth.currentUser?.delete()?.addOnCompleteListener { task ->
                             if (task.isSuccessful) {
-                                Toast.makeText(context, "Account deleted.", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, msgAccountDeleted, Toast.LENGTH_SHORT).show()
                             } else {
                                 Toast.makeText(context, "Error: ${task.exception?.message}", Toast.LENGTH_LONG).show()
                             }
                         }
                     }
-                ) { Text("Delete Permanently", color = MaterialTheme.colorScheme.error) }
+                ) { Text(stringResource(id = R.string.btn_delete_permanently), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { showDeleteAccountDialog = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showDeleteAccountDialog = false }) { Text(stringResource(id = R.string.btn_cancel)) } }
         )
     }
 
@@ -182,7 +196,7 @@ fun ProfileScreen(
             ) {
                 Icon(
                     Icons.Default.Person,
-                    contentDescription = "Guest",
+                    contentDescription = stringResource(id = R.string.cd_guest_avatar),
                     modifier = Modifier.size(64.dp).padding(16.dp),
                     tint = MaterialTheme.colorScheme.onSecondaryContainer
                 )
@@ -191,7 +205,7 @@ fun ProfileScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "You are browsing as a Guest 🍽️",
+                text = stringResource(id = R.string.guest_profile_title),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
@@ -200,7 +214,7 @@ fun ProfileScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Create a profile or log in to unleash full features like adding your own recipes and custom profiles!",
+                text = stringResource(id = R.string.guest_profile_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.outline,
                 textAlign = TextAlign.Center,
@@ -211,12 +225,12 @@ fun ProfileScreen(
 
             Button(
                 onClick = {
-                    Firebase.auth.signOut() // Го одјавуваме анонимниот гост, со што автоматски се отвора AuthScreen
-                    Toast.makeText(context, "Redirecting to Login...", Toast.LENGTH_SHORT).show()
+                    Firebase.auth.signOut()
+                    Toast.makeText(context, msgRedirectingLogin, Toast.LENGTH_SHORT).show()
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp)
             ) {
-                Text("Sign In / Create Account 🍳")
+                Text(stringResource(id = R.string.btn_signin_create_account))
             }
         }
     } else if (isEditingProfile) {
@@ -224,9 +238,9 @@ fun ProfileScreen(
         Column(modifier = Modifier.padding(16.dp).fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { isEditingProfile = false }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(id = R.string.cd_back_button))
                 }
-                Text("Edit Profile", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(stringResource(id = R.string.edit_profile_header), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -241,20 +255,20 @@ fun ProfileScreen(
                 if (newProfileImageUri.isNotEmpty()) {
                     AsyncImage(
                         model = newProfileImageUri,
-                        contentDescription = "New Profile Image",
+                        contentDescription = stringResource(id = R.string.cd_new_profile_image),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
                 } else {
                     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.primaryContainer) {
-                        Icon(Icons.Default.Person, contentDescription = "Avatar", modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Icon(Icons.Default.Person, contentDescription = stringResource(id = R.string.cd_avatar_placeholder), modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
                     }
                 }
                 Surface(
                     modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).height(30.dp),
-                    color = MaterialTheme.colorScheme.blackWithAlpha
+                    color = Color(0x66000000)
                 ) {
-                    Text("CHANGE", style = MaterialTheme.typography.labelSmall, color = androidx.compose.ui.graphics.Color.White, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 6.dp))
+                    Text(stringResource(id = R.string.label_change_photo), style = MaterialTheme.typography.labelSmall, color = Color.White, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 6.dp))
                 }
             }
 
@@ -263,7 +277,7 @@ fun ProfileScreen(
             OutlinedTextField(
                 value = nameInput,
                 onValueChange = { nameInput = it },
-                label = { Text("Display Name") },
+                label = { Text(stringResource(id = R.string.hint_display_name)) },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -282,16 +296,16 @@ fun ProfileScreen(
                                 currentUserName = nameInput
                                 profileImageUriString = newProfileImageUri
                                 isEditingProfile = false
-                                Toast.makeText(context, "Profile updated successfully!", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, msgProfileUpdated, Toast.LENGTH_SHORT).show()
                             } else {
-                                Toast.makeText(context, "Failed to update profile.", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, msgProfileUpdateFailed, Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Save Changes")
+                Text(stringResource(id = R.string.btn_save_changes))
             }
 
             Spacer(modifier = Modifier.weight(1f))
@@ -301,9 +315,9 @@ fun ProfileScreen(
                 colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 modifier = Modifier.padding(bottom = 16.dp)
             ) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete")
+                Icon(Icons.Default.Delete, contentDescription = stringResource(id = R.string.btn_delete))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Delete Account Permanently", fontWeight = FontWeight.Bold)
+                Text(stringResource(id = R.string.btn_delete_account_permanently), fontWeight = FontWeight.Bold)
             }
         }
     } else {
@@ -328,13 +342,13 @@ fun ProfileScreen(
                         if (profileImageUriString.isNotEmpty()) {
                             AsyncImage(
                                 model = profileImageUriString,
-                                contentDescription = "Profile Picture",
+                                contentDescription = stringResource(id = R.string.cd_profile_picture),
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
                             )
                         } else {
                             Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.primaryContainer) {
-                                Icon(Icons.Default.Person, contentDescription = "Profile", modifier = Modifier.size(30.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                                Icon(Icons.Default.Person, contentDescription = stringResource(id = R.string.cd_profile_picture), modifier = Modifier.size(30.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
                             }
                         }
                     }
@@ -351,10 +365,10 @@ fun ProfileScreen(
                 Button(
                     onClick = {
                         Firebase.auth.signOut()
-                        Toast.makeText(context, "Successfully logged out!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, msgLoggedOut, Toast.LENGTH_SHORT).show()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) { Text("Logout") }
+                ) { Text(stringResource(id = R.string.btn_logout)) }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -364,10 +378,10 @@ fun ProfileScreen(
                     selectedSubTab = 0
                     isEditMode = false
                 }) {
-                    Text("My Recipes (${localRecipes.size})", modifier = Modifier.padding(vertical = 12.dp))
+                    Text(stringResource(id = R.string.tab_my_recipes, localRecipes.size), modifier = Modifier.padding(vertical = 12.dp))
                 }
                 Tab(selected = selectedSubTab == 1, onClick = { selectedSubTab = 1 }) {
-                    Text(if (isEditMode) "Edit Recipe ✏️" else "Add New", modifier = Modifier.padding(vertical = 12.dp))
+                    Text(if (isEditMode) stringResource(id = R.string.tab_edit_recipe_indicator) else stringResource(id = R.string.tab_add_new), modifier = Modifier.padding(vertical = 12.dp))
                 }
             }
 
@@ -377,7 +391,7 @@ fun ProfileScreen(
                 if (selectedSubTab == 0) {
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
                         if (localRecipes.isEmpty()) {
-                            item { Text("You haven't added any recipes yet.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline) }
+                            item { Text(stringResource(id = R.string.empty_my_recipes_notice), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline) }
                         }
                         items(items = localRecipes) { local ->
                             Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
@@ -394,9 +408,9 @@ fun ProfileScreen(
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(local.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                         Spacer(modifier = Modifier.height(2.dp))
-                                        Text("Ingredients: ${local.ingredients}", style = MaterialTheme.typography.bodyMedium)
+                                        Text(stringResource(id = R.string.label_ingredients_list, local.ingredients), style = MaterialTheme.typography.bodyMedium)
                                         if (local.isPublic) {
-                                            Text("Shared Globally 🌍", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                                            Text(stringResource(id = R.string.tag_shared_globally), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                                         }
                                     }
 
@@ -410,11 +424,11 @@ fun ProfileScreen(
                                         isPublicChecked = local.isPublic
                                         selectedSubTab = 1
                                     }) {
-                                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.secondary)
+                                        Icon(Icons.Default.Edit, contentDescription = stringResource(id = R.string.cd_edit_icon), tint = MaterialTheme.colorScheme.secondary)
                                     }
 
                                     IconButton(onClick = { recipeToDelete = local }) {
-                                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                                        Icon(Icons.Default.Delete, contentDescription = stringResource(id = R.string.btn_delete), tint = MaterialTheme.colorScheme.error)
                                     }
                                 }
                             }
@@ -423,14 +437,14 @@ fun ProfileScreen(
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
                         item {
-                            OutlinedTextField(value = titleInput, onValueChange = { titleInput = it }, label = { Text("Meal Title") }, modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(value = titleInput, onValueChange = { titleInput = it }, label = { Text(stringResource(id = R.string.hint_meal_title)) }, modifier = Modifier.fillMaxWidth())
                             Spacer(modifier = Modifier.height(8.dp))
 
                             OutlinedTextField(
                                 value = ingredientsInput,
                                 onValueChange = { ingredientsInput = it },
-                                label = { Text("Ingredients (comma separated)") },
-                                placeholder = { Text("tomato, cheese, onion") },
+                                label = { Text(stringResource(id = R.string.hint_ingredients_comma)) },
+                                placeholder = { Text(stringResource(id = R.string.placeholder_ingredients_example)) },
                                 modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(modifier = Modifier.height(8.dp))
@@ -438,7 +452,7 @@ fun ProfileScreen(
                             OutlinedTextField(
                                 value = instructionsInput,
                                 onValueChange = { instructionsInput = it },
-                                label = { Text("Instructions") },
+                                label = { Text(stringResource(id = R.string.hint_instructions_title)) },
                                 modifier = Modifier.fillMaxWidth(),
                                 minLines = 4,
                                 maxLines = 8
@@ -447,13 +461,13 @@ fun ProfileScreen(
 
                             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                                 OutlinedButton(onClick = { galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
-                                    Text("Pick Image from Gallery 📸")
+                                    Text(stringResource(id = R.string.btn_pick_gallery))
                                 }
                                 if (imageUriString.isNotEmpty()) {
-                                    AsyncImage(model = imageUriString, contentDescription = "Preview", modifier = Modifier.size(60.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
+                                    AsyncImage(model = imageUriString, contentDescription = stringResource(id = R.string.cd_preview_image), modifier = Modifier.size(60.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
                                     Spacer(modifier = Modifier.width(8.dp))
                                 } else {
-                                    Text("No image selected", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                                    Text(stringResource(id = R.string.label_no_image_selected), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                                 }
                             }
 
@@ -462,7 +476,7 @@ fun ProfileScreen(
                             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                 Switch(checked = isPublicChecked, onCheckedChange = { isPublicChecked = it })
                                 Spacer(modifier = Modifier.width(12.dp))
-                                Text(if (isPublicChecked) "Share publicly on Firebase" else "Save privately in Room")
+                                Text(if (isPublicChecked) stringResource(id = R.string.switch_share_firebase) else stringResource(id = R.string.switch_save_room))
                             }
 
                             Spacer(modifier = Modifier.height(16.dp))
@@ -540,7 +554,7 @@ fun ProfileScreen(
                                             }
                                         }
 
-                                        Toast.makeText(context, if (isEditMode) "Recipe updated!" else "Recipe saved successfully!", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, if (isEditMode) msgRecipeUpdated else msgRecipeSaved, Toast.LENGTH_SHORT).show()
 
                                         titleInput = ""
                                         ingredientsInput = ""
@@ -551,12 +565,12 @@ fun ProfileScreen(
                                         editingRecipeId = null
                                         selectedSubTab = 0
                                     } else {
-                                        Toast.makeText(context, "Please fill in Title and Ingredients!", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, msgFillRequiredRecipe, Toast.LENGTH_SHORT).show()
                                     }
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text(if (isEditMode) "Update Recipe" else "Save to My Profile")
+                                Text(if (isEditMode) stringResource(id = R.string.btn_update_recipe_action) else stringResource(id = R.string.btn_save_profile_action))
                             }
                         }
                     }

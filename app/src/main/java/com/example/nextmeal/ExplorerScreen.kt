@@ -22,9 +22,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.google.firebase.auth.auth // 🚀 Точниот импорт за auth кој ја решава грешката
+import com.google.firebase.auth.auth
 import com.google.firebase.Firebase
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,8 +47,13 @@ fun ExplorerScreen(
     // Проверка за Анонимен Гост
     val isAnonymous = Firebase.auth.currentUser?.isAnonymous == true
 
+    // Локализирани низи кои се користат во лансери или логика
+    val msgRedirectingAuth = stringResource(id = R.string.toast_redirecting_auth)
+    val defaultCustomInstructions = stringResource(id = R.string.default_custom_instructions)
+    val defaultNoInstructions = stringResource(id = R.string.error_no_instructions)
+
     Column(modifier = Modifier.padding(16.dp).fillMaxSize()) {
-        Text("Explore Recipes", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text(stringResource(id = R.string.explorer_main_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(12.dp))
 
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -57,8 +63,8 @@ fun ExplorerScreen(
                     searchQuery = it
                     if (it.isEmpty()) isSearchingActive = false
                 },
-                placeholder = { Text("Search meals online...") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                placeholder = { Text(stringResource(id = R.string.search_meals_hint)) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = stringResource(id = R.string.cd_search_icon)) },
                 modifier = Modifier.weight(1f),
                 singleLine = true
             )
@@ -81,13 +87,12 @@ fun ExplorerScreen(
                     }
                 },
                 modifier = Modifier.height(56.dp)
-            ) { Text("Search") }
+            ) { Text(stringResource(id = R.string.btn_search_action)) }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            // 🔄 Искористување на isLoading: Прикажуваме анимација додека се пребарува на интернет
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
@@ -100,9 +105,9 @@ fun ExplorerScreen(
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     if (isSearchingActive) {
                         if (apiResults.isEmpty()) {
-                            item { Text("No meals found with that name.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline) }
+                            item { Text(stringResource(id = R.string.error_no_meals_found), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline) }
                         } else {
-                            item { Text("Search Results:", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 4.dp)) }
+                            item { Text(stringResource(id = R.string.search_results_header), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 4.dp)) }
                             items(items = apiResults) { meal ->
                                 Card(
                                     modifier = Modifier
@@ -115,7 +120,7 @@ fun ExplorerScreen(
                                                     title = meal.strMeal,
                                                     imageUrl = meal.strMealThumb,
                                                     ingredients = meal.getFormattedIngredients(),
-                                                    instructions = meal.strInstructions ?: "Mix and style according to standard custom parameters.",
+                                                    instructions = meal.strInstructions ?: defaultCustomInstructions,
                                                     source = "Global API"
                                                 )
                                             )
@@ -134,7 +139,7 @@ fun ExplorerScreen(
                     } else {
                         // 1. Дневна инспирација
                         item {
-                            Text("Daily Culinary Inspiration 💫", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(stringResource(id = R.string.section_daily_inspiration), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.height(8.dp))
                         }
 
@@ -150,7 +155,7 @@ fun ExplorerScreen(
                                                 title = meal.strMeal,
                                                 imageUrl = meal.strMealThumb,
                                                 ingredients = meal.getFormattedIngredients(),
-                                                instructions = meal.strInstructions ?: "No detailed instructions found.",
+                                                instructions = meal.strInstructions ?: defaultNoInstructions,
                                                 source = "Global API (Daily)"
                                             )
                                         )
@@ -164,7 +169,12 @@ fun ExplorerScreen(
                                     Spacer(modifier = Modifier.width(16.dp))
                                     Column {
                                         Text(text = meal.strMeal, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                                        Text(text = "Today's Inspiration: ${randomKeyword.replaceFirstChar { it.uppercase() }} 👨‍🍳", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                                        val capitalKeyword = randomKeyword.replaceFirstChar { it.uppercase() }
+                                        Text(
+                                            text = stringResource(id = R.string.today_inspiration_tag, capitalKeyword),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
                                     }
                                 }
                             }
@@ -174,14 +184,14 @@ fun ExplorerScreen(
 
                         // 2. Популарни од заедницата
                         item {
-                            Text("Popular from Community 🌍", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(stringResource(id = R.string.section_community_popular), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.height(8.dp))
                         }
 
                         if (publicRecipes.isEmpty()) {
                             item {
                                 Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                                    Text("No public recipes yet. Be the first to share one!", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(14.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(stringResource(id = R.string.empty_community_recipes), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(14.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         } else {
@@ -208,7 +218,7 @@ fun ExplorerScreen(
                                                 Column(modifier = Modifier.padding(8.dp)) {
                                                     Text(text = recipe.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, fontWeight = FontWeight.Bold)
                                                     Spacer(modifier = Modifier.height(2.dp))
-                                                    Text(text = "Ingredients: ${recipe.ingredients}", style = MaterialTheme.typography.bodySmall, maxLines = 3, color = MaterialTheme.colorScheme.outline)
+                                                    Text(text = stringResource(id = R.string.label_ingredients_list, recipe.ingredients), style = MaterialTheme.typography.bodySmall, maxLines = 3, color = MaterialTheme.colorScheme.outline)
                                                 }
                                             }
                                         }
@@ -221,7 +231,7 @@ fun ExplorerScreen(
 
                         // 3. Мои лични рецепти (Со проверка за анонимен гост)
                         item {
-                            Text("My Kitchen Masterpieces 👩‍🍳", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(stringResource(id = R.string.section_my_masterpieces), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.height(8.dp))
                         }
 
@@ -236,14 +246,14 @@ fun ExplorerScreen(
                                         horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
                                         Text(
-                                            text = "Your digital kitchen is locked! 🔒",
+                                            text = stringResource(id = R.string.guest_lock_title),
                                             style = MaterialTheme.typography.titleSmall,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onSecondaryContainer
                                         )
                                         Spacer(modifier = Modifier.height(6.dp))
                                         Text(
-                                            text = "To create and view your personal recipes, please log in or register a full account.",
+                                            text = stringResource(id = R.string.guest_lock_subtitle),
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                                             textAlign = TextAlign.Center
@@ -252,11 +262,11 @@ fun ExplorerScreen(
                                         Button(
                                             onClick = {
                                                 Firebase.auth.signOut()
-                                                Toast.makeText(context, "Redirecting to Authentication...", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, msgRedirectingAuth, Toast.LENGTH_SHORT).show()
                                             },
                                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                                         ) {
-                                            Text("Log In / Register 🍳")
+                                            Text(stringResource(id = R.string.btn_login_register_action))
                                         }
                                     }
                                 }
@@ -268,9 +278,9 @@ fun ExplorerScreen(
                                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
                                 ) {
                                     Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text("Your kitchen is quiet! 🧑‍🍳", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                                        Text(stringResource(id = R.string.empty_kitchen_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
                                         Spacer(modifier = Modifier.height(4.dp))
-                                        Text("No personal recipes created yet. Go ahead and add your first culinary masterpiece!", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                                        Text(stringResource(id = R.string.empty_kitchen_subtitle), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
                                     }
                                 }
                             }
@@ -296,7 +306,7 @@ fun ExplorerScreen(
                                         Spacer(modifier = Modifier.width(12.dp))
                                         Column {
                                             Text(text = local.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                                            Text(text = "Ingredients: ${local.ingredients}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            Text(text = stringResource(id = R.string.label_ingredients_list, local.ingredients), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                         }
                                     }
                                 }
