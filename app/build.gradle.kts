@@ -83,4 +83,6 @@ dependencies {
 
 // Coil за приказ на слики од интернет (бидејќи рецептите од API имаат слики)
     implementation("io.coil-kt:coil-compose:2.4.0")
+
+    implementation("com.google.firebase:firebase-messaging")
 }
