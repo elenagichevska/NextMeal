@@ -217,57 +217,77 @@ fun SmartSearchScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // ГРИД ЗА ИЗБОР НА СОСТОЈКИ (Прилагоден за Landscape: 3 колони / Portrait: 2 колони)
+            val configuration = LocalConfiguration.current
+
+            val isTablet = configuration.screenWidthDp >= 600
+            val isLandscape =
+                configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+
+            val categoryColumns = when {
+                !isTablet && !isLandscape -> 1 // Mobile Portrait
+                isTablet && !isLandscape -> 2  // Tablet Portrait
+                !isTablet && isLandscape -> 2  // Mobile Landscape
+                else -> 3                      // Tablet Landscape
+            }
+
             LazyVerticalGrid(
                 columns = GridCells.Fixed(categoryColumns),
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(8.dp)
             ) {
-                groupedIngredients.forEach { (categoryName, ingredients) ->
-                    item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(20.dp),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-                            border = BorderStroke(
-                                1.dp,
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                            ),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
-                                    text = categoryName,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
+                items(groupedIngredients.toList()) { (categoryName, ingredients) ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                        border = BorderStroke(
+                            1.dp,
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        ),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = categoryName,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
 
-                                Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
 
-                                ingredients.forEach { ingredient ->
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 2.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Checkbox(
-                                            checked = selectedIngredients.contains(ingredient.name),
-                                            onCheckedChange = { isChecked ->
-                                                val currentSet = selectedIngredients.toMutableSet()
-                                                if (isChecked) currentSet.add(ingredient.name) else currentSet.remove(ingredient.name)
-                                                onIngredientsChange(currentSet)
+                            ingredients.forEach { ingredient ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Checkbox(
+                                        checked = selectedIngredients.contains(ingredient.name),
+                                        onCheckedChange = { isChecked ->
+                                            val currentSet = selectedIngredients.toMutableSet()
+
+                                            if (isChecked) {
+                                                currentSet.add(ingredient.name)
+                                            } else {
+                                                currentSet.remove(ingredient.name)
                                             }
-                                        )
 
-                                        Spacer(modifier = Modifier.width(8.dp))
+                                            onIngredientsChange(currentSet)
+                                        }
+                                    )
 
-                                        Text(
-                                            text = "${stringResource(id = ingredient.nameRes)} ${ingredient.emoji}",
-                                            style = MaterialTheme.typography.bodyLarge
-                                        )
-                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+
+                                    Text(
+                                        text = "${stringResource(id = ingredient.nameRes)} ${ingredient.emoji}",
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
                                 }
                             }
                         }

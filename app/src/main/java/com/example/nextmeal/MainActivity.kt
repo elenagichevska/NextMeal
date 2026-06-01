@@ -63,6 +63,26 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+
+        try {
+            @Suppress("DEPRECATION")
+            val info = packageManager.getPackageInfo(
+                packageName,
+                android.content.pm.PackageManager.GET_SIGNATURES
+            )
+            // 🌟 Додадена е ?.forEach за безбедно да врти само ако signatures не е null
+            info.signatures?.forEach { signature ->
+                val md = java.security.MessageDigest.getInstance("SHA")
+                md.update(signature.toByteArray())
+                val keyHash = android.util.Base64.encodeToString(md.digest(), android.util.Base64.DEFAULT)
+                android.util.Log.d("FACEBOOK_KEY_HASH", "Твојот Key Hash е: ${keyHash.trim()}")
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("FACEBOOK_KEY_HASH", "Грешка при преземање клуч", e)
+        }
+
+
+
         if (BuildConfig.DEBUG) {
             try {
                 Runtime.getRuntime().exec("setprop debug.firebase.analytics.app com.example.nextmeal")

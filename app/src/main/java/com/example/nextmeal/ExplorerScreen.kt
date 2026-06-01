@@ -318,86 +318,159 @@ fun ExplorerScreen(
 
                         if (isAnonymous) {
                             item(span = { GridItemSpan(totalColumns) }) {
-                                Card(
+                                Box(
                                     modifier = Modifier.fillMaxWidth(),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Column(
-                                        modifier = Modifier.padding(16.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    Card(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .widthIn(max = 600.dp),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.surface
+                                        )
                                     ) {
-                                        Text(
-                                            text = stringResource(id = R.string.guest_lock_title),
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                                        )
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        Text(
-                                            text = stringResource(id = R.string.guest_lock_subtitle),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                            textAlign = TextAlign.Center
-                                        )
-                                        Spacer(modifier = Modifier.height(12.dp))
-                                        Button(
-                                            onClick = {
-                                                Firebase.auth.signOut()
-                                                Toast.makeText(context, msgRedirectingAuth, Toast.LENGTH_SHORT).show()
-                                            },
-                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally
                                         ) {
-                                            Text(stringResource(id = R.string.btn_login_register_action))
+                                            Text(
+                                                text = stringResource(id = R.string.guest_lock_title),
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                textAlign = TextAlign.Center,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+
+                                            Spacer(modifier = Modifier.height(6.dp))
+
+                                            Text(
+                                                text = stringResource(id = R.string.guest_lock_subtitle),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                textAlign = TextAlign.Center,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+
+                                            Spacer(modifier = Modifier.height(12.dp))
+
+                                            Button(
+                                                onClick = {
+                                                    Firebase.auth.signOut()
+                                                    Toast.makeText(
+                                                        context,
+                                                        msgRedirectingAuth,
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                },
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = MaterialTheme.colorScheme.primary
+                                                )
+                                            ) {
+                                                Text(stringResource(id = R.string.btn_login_register_action))
+                                            }
                                         }
                                     }
                                 }
                             }
                         } else if (localRecipes.isEmpty()) {
                             item(span = { GridItemSpan(totalColumns) }) {
-                                Card(
+                                Box(
                                     modifier = Modifier.fillMaxWidth(),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(stringResource(id = R.string.empty_kitchen_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(stringResource(id = R.string.empty_kitchen_subtitle), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center)
+                                    Card(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .widthIn(max = 600.dp),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.surface
+                                        )
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Text(
+                                                text = stringResource(id = R.string.empty_kitchen_title),
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                textAlign = TextAlign.Center,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+
+                                            Spacer(modifier = Modifier.height(4.dp))
+
+                                            Text(
+                                                text = stringResource(id = R.string.empty_kitchen_subtitle),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                textAlign = TextAlign.Center,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                        }
                                     }
                                 }
                             }
                         } else {
                             items(
                                 items = localRecipes.take(4),
-                                span = { GridItemSpan(if (isLandscape) 2 else 1) } // По 2 во ред во Landscape (зафаќаат 2 од 4 колони)
+                                span = { GridItemSpan(if (isLandscape) 2 else 1) }
                             ) { local ->
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(4.dp)
                                         .clickable {
-                                            onRecipeClick(DetailRecipeView("", local.title, local.imageUrl, local.ingredients, local.instructions, "My Kitchen (Local)"))
+                                            onRecipeClick(
+                                                DetailRecipeView(
+                                                    "",
+                                                    local.title,
+                                                    local.imageUrl,
+                                                    local.ingredients,
+                                                    local.instructions,
+                                                    "My Kitchen (Local)"
+                                                )
+                                            )
                                         },
                                     shape = RoundedCornerShape(20.dp),
                                     elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surface
+                                    )
                                 ) {
                                     Row(
-                                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         if (local.imageUrl.isNotEmpty()) {
                                             AsyncImage(
                                                 model = local.imageUrl,
                                                 contentDescription = local.title,
-                                                modifier = Modifier.size(70.dp).clip(RoundedCornerShape(8.dp)),
+                                                modifier = Modifier
+                                                    .size(70.dp)
+                                                    .clip(RoundedCornerShape(8.dp)),
                                                 contentScale = ContentScale.Crop
                                             )
                                         } else {
                                             Box(
-                                                modifier = Modifier.size(70.dp).clip(RoundedCornerShape(8.dp)),
+                                                modifier = Modifier
+                                                    .size(70.dp)
+                                                    .clip(RoundedCornerShape(8.dp)),
                                                 contentAlignment = Alignment.Center
                                             ) {
-                                                Text("📝", style = MaterialTheme.typography.titleLarge)
+                                                Text(
+                                                    "📝",
+                                                    style = MaterialTheme.typography.titleLarge
+                                                )
                                             }
                                         }
 
@@ -411,9 +484,14 @@ fun ExplorerScreen(
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
                                             )
+
                                             Spacer(modifier = Modifier.height(4.dp))
+
                                             Text(
-                                                text = stringResource(id = R.string.label_ingredients_list, local.ingredients),
+                                                text = stringResource(
+                                                    id = R.string.label_ingredients_list,
+                                                    local.ingredients
+                                                ),
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
