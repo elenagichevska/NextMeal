@@ -8,7 +8,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -85,15 +84,15 @@ fun RecipeDetailScreen(
                                     contentDescription = recipe.title,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(180.dp)
+                                        .heightIn(min = 200.dp, max = 350.dp) // 🌟 Зголемен лимит за таблет за цела да ја собера
                                         .clip(RoundedCornerShape(16.dp)),
-                                    contentScale = ContentScale.Crop
+                                    contentScale = ContentScale.Fit // 🌟 Спречува сечење (Crop) на сликата
                                 )
                             } else {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(150.dp)
+                                        .height(200.dp)
                                         .clip(RoundedCornerShape(16.dp))
                                         .background(MaterialTheme.colorScheme.surfaceVariant),
                                     contentAlignment = Alignment.Center
@@ -101,7 +100,7 @@ fun RecipeDetailScreen(
                                     Text(stringResource(id = R.string.label_no_image_placeholder), style = MaterialTheme.typography.titleMedium)
                                 }
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
                             Text(
                                 text = recipe.title,
                                 style = MaterialTheme.typography.titleLarge,
@@ -116,7 +115,7 @@ fun RecipeDetailScreen(
                             )
                         }
 
-                        // ДЕСНО: Твојата картичка за Состојки
+                        // ДЕСНО: Картичка за Состојки
                         Box(modifier = Modifier.weight(1.3f)) {
                             IngredientsCard(recipe = recipe)
                         }
@@ -129,9 +128,9 @@ fun RecipeDetailScreen(
                             contentDescription = recipe.title,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(240.dp)
+                                .heightIn(min = 250.dp, max = 450.dp) // 🌟 На таблет вертикално да има простор за цела слика
                                 .clip(RoundedCornerShape(16.dp)),
-                            contentScale = ContentScale.Crop
+                            contentScale = ContentScale.Fit // 🌟 Спречува сечење (Crop) на сликата
                         )
                     } else {
                         Box(

@@ -3,8 +3,9 @@ package com.example.nextmeal
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -16,11 +17,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import androidx.compose.ui.res.stringResource
 
 // 1. Помошни дата класи за рангирање
 data class RankedCustomRecipe(
@@ -84,12 +86,16 @@ fun SmartSearchScreen(
     hasSearched: Boolean,
     onHasSearchedChange: (Boolean) -> Unit,
     onRecipeClick: (DetailRecipeView) -> Unit,
-    onSmartSearchLogged: (Int) -> Unit // 👈 Го додадовме овој callback за Firebase аналитика
+    onSmartSearchLogged: (Int) -> Unit
 ) {
-
     val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
-    // ДИНАМИЧКО ГРУПИРАЊЕ: Ги зема преведените имиња на категориите од strings.xml
+    // Динамички број на колони базиран на ориентацијата за таблет приказ
+    val categoryColumns = if (isLandscape) 3 else 2
+    val resultColumns = if (isLandscape) 2 else 1
+
     val groupedIngredients = remember(IngredientsData.list) {
         IngredientsData.list.groupBy { context.getString(it.categoryRes) }
     }
@@ -172,7 +178,6 @@ fun SmartSearchScreen(
     Column(modifier = Modifier.padding(16.dp)) {
         if (!hasSearched) {
             Column(modifier = Modifier.padding(16.dp)) {
-
                 Text(
                     text = stringResource(id = R.string.fridge_screen_title),
                     style = MaterialTheme.typography.headlineLarge,
@@ -181,7 +186,6 @@ fun SmartSearchScreen(
                     modifier = Modifier
                         .padding(bottom = 4.dp)
                         .drawBehind {
-                            // мала сенка ефект (soft shadow feel)
                             drawContext.canvas.nativeCanvas.apply {
                                 val paint = android.graphics.Paint().apply {
                                     color = android.graphics.Color.BLACK
@@ -212,34 +216,26 @@ fun SmartSearchScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            LazyColumn(modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()) {
+            // ГРИД ЗА ИЗБОР НА СОСТОЈКИ (Прилагоден за Landscape: 3 колони / Portrait: 2 колони)
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(categoryColumns),
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
                 groupedIngredients.forEach { (categoryName, ingredients) ->
-
                     item {
-
                         Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
+                            modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(20.dp),
-                            elevation = CardDefaults.cardElevation(
-                                defaultElevation = 6.dp
-                            ),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
                             border = BorderStroke(
                                 1.dp,
                                 MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                             ),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surface
-                            )
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                         ) {
-
-                            Column(
-                                modifier = Modifier.padding(16.dp)
-                            ) {
-
+                            Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
                                     text = categoryName,
                                     style = MaterialTheme.typography.titleMedium,
@@ -250,26 +246,17 @@ fun SmartSearchScreen(
                                 Spacer(modifier = Modifier.height(12.dp))
 
                                 ingredients.forEach { ingredient ->
-
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(vertical = 2.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-
                                         Checkbox(
                                             checked = selectedIngredients.contains(ingredient.name),
                                             onCheckedChange = { isChecked ->
-
-                                                val currentSet =
-                                                    selectedIngredients.toMutableSet()
-
-                                                if (isChecked)
-                                                    currentSet.add(ingredient.name)
-                                                else
-                                                    currentSet.remove(ingredient.name)
-
+                                                val currentSet = selectedIngredients.toMutableSet()
+                                                if (isChecked) currentSet.add(ingredient.name) else currentSet.remove(ingredient.name)
                                                 onIngredientsChange(currentSet)
                                             }
                                         )
@@ -287,6 +274,7 @@ fun SmartSearchScreen(
                     }
                 }
             }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -304,24 +292,19 @@ fun SmartSearchScreen(
 
                 Button(
                     onClick = {
-                        // 👈 Се активира аналитиката точно ТУКА на клик со точниот број на намирници
                         onSmartSearchLogged(selectedIngredients.size)
                         onHasSearchedChange(true)
                     },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(50.dp),
+                    modifier = Modifier.weight(1f).height(50.dp),
                     enabled = selectedIngredients.isNotEmpty()
                 ) {
                     Text(stringResource(id = R.string.btn_find_recipes, selectedIngredients.size))
                 }
             }
         } else {
-            // 👈 СОВРШЕНО ЦЕНТРИРАН НАСЛОВ СО ПОМОШ НА BOX КОМПОНЕНТА
+            // ПРИКАЗ НА РЕЗУЛТАТИТЕ
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 contentAlignment = Alignment.Center
             ) {
                 IconButton(
@@ -329,9 +312,7 @@ fun SmartSearchScreen(
                         apiResults.clear()
                         onHasSearchedChange(false)
                     },
-                    modifier = Modifier
-                        .size(40.dp)
-                        .align(Alignment.CenterStart) // Иконата оди скроз лево
+                    modifier = Modifier.size(40.dp).align(Alignment.CenterStart)
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -342,10 +323,11 @@ fun SmartSearchScreen(
 
                 Text(
                     text = stringResource(id = R.string.search_results_main_title),
-                    style = MaterialTheme.typography.titleLarge, // Оптимизирано за насловна лента
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
             }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             if (isLoading) {
@@ -353,17 +335,30 @@ fun SmartSearchScreen(
                     CircularProgressIndicator()
                 }
             } else {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                // ГРИД ЗА РЕЗУЛТАТИ (Прилагоден за Landscape: 2 колони една до друга / Portrait: 1 колона)
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(resultColumns),
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     if (matchedCustomResults.isNotEmpty()) {
                         item {
-                            Text(stringResource(id = R.string.section_matched_custom_recipes), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 8.dp))
+                            Text(
+                                text = stringResource(id = R.string.section_matched_custom_recipes),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
                         }
-                        this.items(items = matchedCustomResults) { ranked ->
-                            val containerColor = MaterialTheme.colorScheme.surface
+
+                        // Празен елемент кој помага наредните картички правилно да почнат во нов ред во Landscape
+                        if (isLandscape) { item { Spacer(modifier = Modifier.fillMaxWidth()) } }
+
+                        items(matchedCustomResults) { ranked ->
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 6.dp)
                                     .clickable {
                                         onRecipeClick(
                                             DetailRecipeView(
@@ -377,23 +372,15 @@ fun SmartSearchScreen(
                                         )
                                     },
                                 shape = RoundedCornerShape(20.dp),
-                                elevation = CardDefaults.cardElevation(
-                                    defaultElevation = 6.dp
-                                ),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surface
-                                )
-                            ){
-                                Row(modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                            ) {
+                                Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                     if (ranked.imageUrl.isNotEmpty()) {
                                         AsyncImage(
                                             model = ranked.imageUrl,
                                             contentDescription = ranked.title,
-                                            modifier = Modifier
-                                                .size(70.dp)
-                                                .clip(RoundedCornerShape(8.dp)),
+                                            modifier = Modifier.size(70.dp).clip(RoundedCornerShape(8.dp)),
                                             contentScale = ContentScale.Crop
                                         )
                                         Spacer(modifier = Modifier.width(12.dp))
@@ -401,33 +388,39 @@ fun SmartSearchScreen(
 
                                     Column(modifier = Modifier.weight(1f)) {
                                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                            Text(ranked.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                            Text(ranked.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
                                             Text(ranked.source, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                                         }
                                         Spacer(modifier = Modifier.height(4.dp))
-                                        Text(stringResource(id = R.string.label_ingredients_list, ranked.allIngredientsString), style = MaterialTheme.typography.bodyMedium)
+                                        Text(stringResource(id = R.string.label_ingredients_list, ranked.allIngredientsString), style = MaterialTheme.typography.bodyMedium, maxLines = 1)
                                         Spacer(modifier = Modifier.height(4.dp))
                                         if (ranked.missingIngredients.isEmpty()) {
                                             Text(stringResource(id = R.string.label_all_ingredients_owned), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                                         } else {
-                                            Text(stringResource(id = R.string.label_missing_ingredients_list, ranked.missingIngredients.joinToString(", ")), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                                            Text(stringResource(id = R.string.label_missing_ingredients_list, ranked.missingIngredients.joinToString(", ")), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, maxLines = 1)
                                         }
                                     }
                                 }
                             }
                         }
-                        item { Spacer(modifier = Modifier.height(16.dp)) }
                     }
 
                     if (apiResults.isNotEmpty()) {
                         item {
-                            Text(stringResource(id = R.string.section_global_api_inspiration), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 8.dp))
+                            Text(
+                                text = stringResource(id = R.string.section_global_api_inspiration),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
                         }
-                        this.items(items = apiResults) { rankedApi ->
+
+                        if (isLandscape) { item { Spacer(modifier = Modifier.fillMaxWidth()) } }
+
+                        items(apiResults) { rankedApi ->
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 6.dp)
                                     .clickable {
                                         onRecipeClick(
                                             DetailRecipeView(
@@ -441,37 +434,29 @@ fun SmartSearchScreen(
                                         )
                                     },
                                 shape = RoundedCornerShape(20.dp),
-                                elevation = CardDefaults.cardElevation(
-                                    defaultElevation = 6.dp
-                                ),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surface
-                                )
-                            ){
-                                Row(modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                            ) {
+                                Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                     AsyncImage(
                                         model = rankedApi.imageUrl,
                                         contentDescription = rankedApi.title,
-                                        modifier = Modifier
-                                            .size(70.dp)
-                                            .clip(RoundedCornerShape(8.dp)),
+                                        modifier = Modifier.size(70.dp).clip(RoundedCornerShape(8.dp)),
                                         contentScale = ContentScale.Crop
                                     )
                                     Spacer(modifier = Modifier.width(16.dp))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                            Text(rankedApi.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                            Text(rankedApi.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
                                         }
                                         Spacer(modifier = Modifier.height(4.dp))
-                                        Text(stringResource(id = R.string.label_ingredients_list, rankedApi.allIngredientsString), style = MaterialTheme.typography.bodyMedium, maxLines = 2)
+                                        Text(stringResource(id = R.string.label_ingredients_list, rankedApi.allIngredientsString), style = MaterialTheme.typography.bodyMedium, maxLines = 1)
                                         Spacer(modifier = Modifier.height(4.dp))
 
                                         if (rankedApi.missingIngredients.isEmpty()) {
                                             Text(stringResource(id = R.string.label_all_ingredients_owned), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                                         } else {
-                                            Text(stringResource(id = R.string.label_missing_ingredients_list, rankedApi.missingIngredients.joinToString(", ")), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                                            Text(stringResource(id = R.string.label_missing_ingredients_list, rankedApi.missingIngredients.joinToString(", ")), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, maxLines = 1)
                                         }
                                     }
                                 }

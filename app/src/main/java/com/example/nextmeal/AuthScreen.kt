@@ -48,7 +48,6 @@ fun AuthScreen(
     var profileImageUriString by remember { mutableStateOf("") }
     var isRegisterMode by remember { mutableStateOf(false) }
 
-    // Локализирани Toast пораки за користење внатре во onClick
     val msgEnterName = stringResource(id = R.string.toast_enter_name)
     val msgPasswordsMatch = stringResource(id = R.string.toast_passwords_dont_match)
     val msgSignUpSuccess = stringResource(id = R.string.toast_signup_success)
@@ -57,7 +56,6 @@ fun AuthScreen(
     val msgFillAllFields = stringResource(id = R.string.toast_fill_all_fields)
     val msgGuestLoginSuccess = stringResource(id = R.string.toast_guest_login_success)
 
-    // Лансер за избор на профилна слика од галерија
     val profileImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
@@ -71,21 +69,25 @@ fun AuthScreen(
             profileImageUriString = uri.toString()
         }
     }
-    Box(
-        modifier = Modifier.fillMaxSize()
-    ) {
 
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center // 🌟 Го центрираме целиот блок на средина на екранот
+    ) {
         Image(
             painter = painterResource(id = R.drawable.background),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
+
+        // 🌟 КЛУЧНО: Оваа колона ја ограничуваме во ширина за да не се развлекува на таблет
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .widthIn(max = 460.dp)
+                .fillMaxWidth()
                 .padding(24.dp)
-                .verticalScroll(rememberScrollState()), // Спречува кршење на UI кога е отворена тастатурата
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -107,7 +109,6 @@ fun AuthScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Аватар / Слика за избор (Само во Register Mode)
             if (isRegisterMode) {
                 Box(
                     modifier = Modifier
@@ -163,10 +164,10 @@ fun AuthScreen(
                     label = { Text(stringResource(id = R.string.hint_full_name)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                    focusedContainerColor = MaterialTheme.colorScheme.surface
-                )
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedContainerColor = MaterialTheme.colorScheme.surface
+                    )
                 )
                 Spacer(modifier = Modifier.height(12.dp))
             }
@@ -214,7 +215,6 @@ fun AuthScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Копче за класична најава / регистрација со е-маил
             Button(
                 onClick = {
                     if (email.isNotEmpty() && password.isNotEmpty()) {
@@ -224,8 +224,7 @@ fun AuthScreen(
                                 return@Button
                             }
                             if (password != confirmPassword) {
-                                Toast.makeText(context, msgPasswordsMatch, Toast.LENGTH_SHORT)
-                                    .show()
+                                Toast.makeText(context, msgPasswordsMatch, Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
                             auth.createUserWithEmailAndPassword(email, password)
@@ -239,31 +238,21 @@ fun AuthScreen(
                                         }
                                         auth.currentUser?.updateProfile(profileUpdates)
                                             ?.addOnCompleteListener {
-                                                onAuthEventLogged("email_signup_success") // Analytics
-                                                Toast.makeText(
-                                                    context,
-                                                    msgSignUpSuccess,
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
+                                                onAuthEventLogged("email_signup_success")
+                                                Toast.makeText(context, msgSignUpSuccess, Toast.LENGTH_SHORT).show()
                                             }
                                     } else {
-                                        Toast.makeText(
-                                            context,
-                                            "Error: ${task.exception?.message}",
-                                            Toast.LENGTH_LONG
-                                        ).show()
+                                        Toast.makeText(context, "Error: ${task.exception?.message}", Toast.LENGTH_LONG).show()
                                     }
                                 }
                         } else {
                             auth.signInWithEmailAndPassword(email, password)
                                 .addOnCompleteListener { task ->
                                     if (task.isSuccessful) {
-                                        onAuthEventLogged("email_login_success") // Analytics
-                                        Toast.makeText(context, msgLoginSuccess, Toast.LENGTH_SHORT)
-                                            .show()
+                                        onAuthEventLogged("email_login_success")
+                                        Toast.makeText(context, msgLoginSuccess, Toast.LENGTH_SHORT).show()
                                     } else {
-                                        Toast.makeText(context, msgLoginError, Toast.LENGTH_LONG)
-                                            .show()
+                                        Toast.makeText(context, msgLoginError, Toast.LENGTH_LONG).show()
                                     }
                                 }
                         }
@@ -274,103 +263,60 @@ fun AuthScreen(
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text(
-                    if (isRegisterMode) stringResource(id = R.string.btn_register_email) else stringResource(
-                        id = R.string.btn_login_email
-                    )
-                )
+                Text(if (isRegisterMode) stringResource(id = R.string.btn_register_email) else stringResource(id = R.string.btn_login_email))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             TextButton(onClick = { isRegisterMode = !isRegisterMode }) {
-                Text(
-                    if (isRegisterMode) stringResource(id = R.string.switch_to_login) else stringResource(
-                        id = R.string.switch_to_register
-                    )
-                )
+                Text(if (isRegisterMode) stringResource(id = R.string.switch_to_login) else stringResource(id = R.string.switch_to_register))
             }
 
-            // --- ЛИНИЈА ЗА ПОДЕЛБА НА СОЦИЈАЛНИ МРЕЖИ ---
             Spacer(modifier = Modifier.height(16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                HorizontalDivider(
-                    modifier = Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.outline
-                )
-                Text(
-                    text = stringResource(id = R.string.or_connect_with),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.padding(horizontal = 8.dp)
-                )
-                HorizontalDivider(
-                    modifier = Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.outline
-                )
+                HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline)
+                Text(text = stringResource(id = R.string.or_connect_with), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(horizontal = 8.dp))
+                HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline)
             }
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 🌟 КОПЧИЊАТА ЕДНО ДО ДРУГО (СПАКУВАНИ ВО ROW)
+            // Социјални копчиња кои убаво се скалираат во рамки на ограничениот макс-ширина контејнер
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // --- ГУГЛ НАЈАВА ---
                 OutlinedButton(
                     onClick = {
                         onGoogleSignIn()
-                        onAuthEventLogged("google_login_attempt") // Analytics
+                        onAuthEventLogged("google_login_attempt")
                     },
                     modifier = Modifier.weight(1f).height(50.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface, containerColor = MaterialTheme.colorScheme.surface )
-
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_google),
-                            contentDescription = stringResource(id = R.string.cd_google_logo),
-                            modifier = Modifier.size(20.dp)
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                        Image(painter = painterResource(id = R.drawable.ic_google), contentDescription = stringResource(id = R.string.cd_google_logo), modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            stringResource(id = R.string.google_sign_in),
-                            fontWeight = FontWeight.Medium
-                        )
+                        Text(stringResource(id = R.string.google_sign_in), fontWeight = FontWeight.Medium)
                     }
                 }
 
-                // --- ФЕЈСБУК НАЈАВА ---
                 OutlinedButton(
                     onClick = {
                         onFacebookSignIn()
-                        onAuthEventLogged("facebook_login_attempt") // Analytics
+                        onAuthEventLogged("facebook_login_attempt")
                     },
                     modifier = Modifier.weight(1f).height(50.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface, containerColor = MaterialTheme.colorScheme.surface)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_facebook),
-                            contentDescription = stringResource(id = R.string.cd_facebook_logo),
-                            modifier = Modifier.size(20.dp)
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                        Image(painter = painterResource(id = R.drawable.ic_facebook), contentDescription = stringResource(id = R.string.cd_facebook_logo), modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            stringResource(id = R.string.facebook_sign_in),
-                            fontWeight = FontWeight.Medium
-                        )
+                        Text(stringResource(id = R.string.facebook_sign_in), fontWeight = FontWeight.Medium)
                     }
                 }
             }
@@ -380,20 +326,9 @@ fun AuthScreen(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                HorizontalDivider(
-                    modifier = Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
-                )
-                Text(
-                    text = stringResource(id = R.string.divider_guest_notice),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.padding(horizontal = 8.dp)
-                )
-                HorizontalDivider(
-                    modifier = Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
-                )
+                HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f))
+                Text(text = stringResource(id = R.string.divider_guest_notice), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(horizontal = 8.dp))
+                HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f))
             }
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -402,36 +337,19 @@ fun AuthScreen(
                     auth.signInAnonymously()
                         .addOnCompleteListener { task ->
                             if (task.isSuccessful) {
-                                onAuthEventLogged("guest_login_success") // Analytics
-                                Toast.makeText(context, msgGuestLoginSuccess, Toast.LENGTH_SHORT)
-                                    .show()
+                                onAuthEventLogged("guest_login_success")
+                                Toast.makeText(context, msgGuestLoginSuccess, Toast.LENGTH_SHORT).show()
                             } else {
-                                Toast.makeText(
-                                    context,
-                                    "Guest login failed: ${task.exception?.message}",
-                                    Toast.LENGTH_LONG
-                                ).show()
+                                Toast.makeText(context, "Guest login failed: ${task.exception?.message}", Toast.LENGTH_LONG).show()
                             }
                         }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
+                modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.elevatedButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.onSurface
-                )
+                colors = ButtonDefaults.elevatedButtonColors(containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.onSurface)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = stringResource(id = R.string.btn_anonymous),
-                        fontWeight = FontWeight.SemiBold,
-                        style = MaterialTheme.typography.bodyLarge
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                    Text(text = stringResource(id = R.string.btn_anonymous), fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyLarge)
                 }
             }
         }

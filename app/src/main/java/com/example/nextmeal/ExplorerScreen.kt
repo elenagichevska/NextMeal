@@ -3,11 +3,15 @@ package com.example.nextmeal
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -36,7 +40,7 @@ fun ExplorerScreen(
     randomKeyword: String,
     isSuggestionsLoading: Boolean,
     onRecipeClick: (DetailRecipeView) -> Unit,
-    onSearchLogged: (String) -> Unit // 👈 Го додадовме овој callback за Firebase Analytics
+    onSearchLogged: (String) -> Unit
 ) {
     val context = LocalContext.current
     var searchQuery by rememberSaveable { mutableStateOf("") }
@@ -45,10 +49,13 @@ fun ExplorerScreen(
     var isLoading by rememberSaveable { mutableStateOf(false) }
     var isSearchingActive by rememberSaveable { mutableStateOf(false) }
 
-    // Проверка за Анонимен Гост
     val isAnonymous = Firebase.auth.currentUser?.isAnonymous == true
 
-    // Локализирани низи кои се користат во лансери или логика
+    // Детекција на ориентација
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    val totalColumns = if (isLandscape) 4 else 2
+
     val msgRedirectingAuth = stringResource(id = R.string.toast_redirecting_auth)
     val defaultCustomInstructions = stringResource(id = R.string.default_custom_instructions)
     val defaultNoInstructions = stringResource(id = R.string.error_no_instructions)
@@ -66,6 +73,19 @@ fun ExplorerScreen(
                 },
                 placeholder = { Text(stringResource(id = R.string.search_meals_hint)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = stringResource(id = R.string.cd_search_icon)) },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(
+                            onClick = {
+                                searchQuery = ""
+                                isSearchingActive = false
+                                apiResults.clear()
+                            }
+                        ) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear search")
+                        }
+                    }
+                },
                 modifier = Modifier.weight(1f),
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
@@ -77,9 +97,7 @@ fun ExplorerScreen(
             Button(
                 onClick = {
                     if (searchQuery.isNotEmpty()) {
-                        // 👈 СЕ АКТИВИРА АНАЛИТИКАТА ТУКА: Го испраќа поимот за пребарување во MainActivity
                         onSearchLogged(searchQuery.trim())
-
                         isLoading = true
                         isSearchingActive = true
                         coroutineScope.launch {
@@ -110,17 +128,30 @@ fun ExplorerScreen(
                     CircularProgressIndicator()
                 }
             } else {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(totalColumns),
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     if (isSearchingActive) {
                         if (apiResults.isEmpty()) {
-                            item { Text(stringResource(id = R.string.error_no_meals_found), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline) }
+                            item(span = { GridItemSpan(totalColumns) }) {
+                                Text(stringResource(id = R.string.error_no_meals_found), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+                            }
                         } else {
-                            item { Text(stringResource(id = R.string.search_results_header), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 4.dp)) }
-                            items(items = apiResults) { meal ->
+                            item(span = { GridItemSpan(totalColumns) }) {
+                                Text(stringResource(id = R.string.search_results_header), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 4.dp))
+                            }
+
+                            items(
+                                items = apiResults,
+                                span = { GridItemSpan(if (isLandscape) 2 else 1) } // По 2 во ред во Landscape, по 1 во Portrait (бидејќи вкупните колони се 2)
+                            ) { meal ->
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 6.dp)
+                                        .padding(4.dp)
                                         .clickable {
                                             onRecipeClick(
                                                 DetailRecipeView(
@@ -132,30 +163,55 @@ fun ExplorerScreen(
                                                     source = "Global API"
                                                 )
                                             )
-                                        }
+                                        },
+                                    shape = RoundedCornerShape(20.dp),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                                 ) {
-                                    Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                        AsyncImage(model = meal.strMealThumb, contentDescription = meal.strMeal, modifier = Modifier
-                                            .size(80.dp)
-                                            .clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        AsyncImage(
+                                            model = meal.strMealThumb,
+                                            contentDescription = meal.strMeal,
+                                            modifier = Modifier.size(70.dp).clip(RoundedCornerShape(8.dp)),
+                                            contentScale = ContentScale.Crop
+                                        )
                                         Spacer(modifier = Modifier.width(16.dp))
-                                        Text(text = meal.strMeal, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = meal.strMeal,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = stringResource(id = R.string.label_ingredients_list, meal.getFormattedIngredients()),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
                     } else {
-                        // 1. Дневна инспирација
-                        item {
+                        // 1. ДНЕВНА ИНСПИРАЦИЈА
+                        item(span = { GridItemSpan(totalColumns) }) {
                             Text(stringResource(id = R.string.section_daily_inspiration), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(8.dp))
                         }
 
-                        items(items = apiSuggestions) { meal ->
+                        // Овде секоја картичка зафаќа по 1 колона.
+                        // Во Landscape (4 колони) излегуваат 4 во ред. Во Portrait (2 колони) излегуваат 2 во ред.
+                        items(items = apiSuggestions, span = { GridItemSpan(1) }) { meal ->
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
+                                    .padding(4.dp)
                                     .clickable {
                                         onRecipeClick(
                                             DetailRecipeView(
@@ -168,48 +224,58 @@ fun ExplorerScreen(
                                             )
                                         )
                                     },
-                                shape = RoundedCornerShape(20.dp),
-                                elevation = CardDefaults.cardElevation(
-                                    defaultElevation = 6.dp
-                                ),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surface
-                                )
+                                shape = RoundedCornerShape(16.dp),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                             ) {
-                                Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    AsyncImage(model = meal.strMealThumb, contentDescription = meal.strMeal, modifier = Modifier
-                                        .size(70.dp)
-                                        .clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
-                                    Spacer(modifier = Modifier.width(16.dp))
-                                    Column {
-                                        Text(text = meal.strMeal, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                                        val capitalKeyword = randomKeyword.replaceFirstChar { it.uppercase() }
-                                        Text(
-                                            text = stringResource(id = R.string.today_inspiration_tag, capitalKeyword),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
+                                Column(
+                                    modifier = Modifier.padding(8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    AsyncImage(
+                                        model = meal.strMealThumb,
+                                        contentDescription = meal.strMeal,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .aspectRatio(1.3f)
+                                            .clip(RoundedCornerShape(12.dp)),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = meal.strMeal,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    val capitalKeyword = randomKeyword.replaceFirstChar { it.uppercase() }
+                                    Text(
+                                        text = stringResource(id = R.string.today_inspiration_tag, capitalKeyword),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        textAlign = TextAlign.Center
+                                    )
                                 }
                             }
                         }
 
-                        item { Spacer(modifier = Modifier.height(20.dp)) }
+                        item(span = { GridItemSpan(totalColumns) }) { Spacer(modifier = Modifier.height(12.dp)) }
 
-                        // 2. Популарни од заедницата
-                        item {
+                        // 2. ПОПУЛАРНИ ОД ЗАЕДНИЦАТА
+                        item(span = { GridItemSpan(totalColumns) }) {
                             Text(stringResource(id = R.string.section_community_popular), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(8.dp))
                         }
 
                         if (publicRecipes.isEmpty()) {
-                            item {
+                            item(span = { GridItemSpan(totalColumns) }) {
                                 Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                                     Text(stringResource(id = R.string.empty_community_recipes), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(14.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         } else {
-                            item {
+                            item(span = { GridItemSpan(totalColumns) }) {
                                 LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                                     items(items = publicRecipes.take(6)) { recipe ->
                                         Card(
@@ -219,14 +285,9 @@ fun ExplorerScreen(
                                                 .clickable {
                                                     onRecipeClick(DetailRecipeView("", recipe.title, recipe.imageUrl, recipe.ingredients, recipe.instructions, "Community Shared"))
                                                 },
-
-                                                    shape = RoundedCornerShape(20.dp),
-                                            elevation = CardDefaults.cardElevation(
-                                                defaultElevation = 6.dp
-                                            ),
-                                            colors = CardDefaults.cardColors(
-                                                containerColor = MaterialTheme.colorScheme.surface
-                                            )
+                                            shape = RoundedCornerShape(20.dp),
+                                            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                                         ) {
                                             Column {
                                                 if (recipe.imageUrl.isNotEmpty()) {
@@ -248,16 +309,15 @@ fun ExplorerScreen(
                             }
                         }
 
-                        item { Spacer(modifier = Modifier.height(20.dp)) }
+                        item(span = { GridItemSpan(totalColumns) }) { Spacer(modifier = Modifier.height(12.dp)) }
 
-                        // 3. Мои лични рецепти (Со проверка за анонимен гост)
-                        item {
+                        // 3. МОИ ЛИЧНИ РЕЦЕПТИ
+                        item(span = { GridItemSpan(totalColumns) }) {
                             Text(stringResource(id = R.string.section_my_masterpieces), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(8.dp))
                         }
 
                         if (isAnonymous) {
-                            item {
+                            item(span = { GridItemSpan(totalColumns) }) {
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -293,7 +353,7 @@ fun ExplorerScreen(
                                 }
                             }
                         } else if (localRecipes.isEmpty()) {
-                            item {
+                            item(span = { GridItemSpan(totalColumns) }) {
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -301,39 +361,63 @@ fun ExplorerScreen(
                                     Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                         Text(stringResource(id = R.string.empty_kitchen_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                         Spacer(modifier = Modifier.height(4.dp))
-                                        Text(stringResource(id = R.string.empty_kitchen_subtitle), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                                        Text(stringResource(id = R.string.empty_kitchen_subtitle), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center)
                                     }
                                 }
                             }
                         } else {
-                            items(items = localRecipes.take(4)) { local ->
+                            items(
+                                items = localRecipes.take(4),
+                                span = { GridItemSpan(if (isLandscape) 2 else 1) } // По 2 во ред во Landscape (зафаќаат 2 од 4 колони)
+                            ) { local ->
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 4.dp)
+                                        .padding(4.dp)
                                         .clickable {
                                             onRecipeClick(DetailRecipeView("", local.title, local.imageUrl, local.ingredients, local.instructions, "My Kitchen (Local)"))
                                         },
                                     shape = RoundedCornerShape(20.dp),
-                                    elevation = CardDefaults.cardElevation(
-                                        defaultElevation = 6.dp
-                                    ),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surface
-                                    )
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                                 ) {
-                                    Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
                                         if (local.imageUrl.isNotEmpty()) {
-                                            AsyncImage(model = local.imageUrl, contentDescription = local.title, modifier = Modifier
-                                                .size(55.dp)
-                                                .clip(RoundedCornerShape(6.dp)), contentScale = ContentScale.Crop)
+                                            AsyncImage(
+                                                model = local.imageUrl,
+                                                contentDescription = local.title,
+                                                modifier = Modifier.size(70.dp).clip(RoundedCornerShape(8.dp)),
+                                                contentScale = ContentScale.Crop
+                                            )
                                         } else {
-                                            Box(modifier = Modifier.size(55.dp), contentAlignment = Alignment.Center) { Text("📝") }
+                                            Box(
+                                                modifier = Modifier.size(70.dp).clip(RoundedCornerShape(8.dp)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text("📝", style = MaterialTheme.typography.titleLarge)
+                                            }
                                         }
+
                                         Spacer(modifier = Modifier.width(12.dp))
-                                        Column {
-                                            Text(text = local.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                                            Text(text = stringResource(id = R.string.label_ingredients_list, local.ingredients), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, maxLines = 1, overflow = TextOverflow.Ellipsis)
+
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = local.title,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = stringResource(id = R.string.label_ingredients_list, local.ingredients),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
                                         }
                                     }
                                 }
