@@ -36,13 +36,16 @@ import kotlinx.coroutines.launch
 import androidx.core.net.toUri
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
+import androidx.navigation.NavHostController
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
+    onRecipeClick: (DetailRecipeView) -> Unit,
     recipeDao: RecipeDao,
     localRecipes: List<LocalRecipe>,
-    db: FirebaseFirestore
+    db: FirebaseFirestore,
+    onRecipeCreatedLogged: (String, Int) -> Unit // 👈 Овој callback безбедно го пренесува настанот до MainActivity
 ) {
     val contentResolver = LocalContext.current.contentResolver
     val context = LocalContext.current
@@ -192,13 +195,13 @@ fun ProfileScreen(
             Surface(
                 modifier = Modifier.size(100.dp),
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.secondaryContainer
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Icon(
                     Icons.Default.Person,
                     contentDescription = stringResource(id = R.string.cd_guest_avatar),
                     modifier = Modifier.size(64.dp).padding(16.dp),
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
 
@@ -278,7 +281,12 @@ fun ProfileScreen(
                 value = nameInput,
                 onValueChange = { nameInput = it },
                 label = { Text(stringResource(id = R.string.hint_display_name)) },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                disabledContainerColor = MaterialTheme.colorScheme.surface
+            )
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -394,8 +402,34 @@ fun ProfileScreen(
                             item { Text(stringResource(id = R.string.empty_my_recipes_notice), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline) }
                         }
                         items(items = localRecipes) { local ->
-                            Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                                Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .clickable {
+                                        onRecipeClick(
+                                            DetailRecipeView(
+                                                id = local.id.toString(),
+                                                title = local.title,
+                                                imageUrl = local.imageUrl,
+                                                ingredients = local.ingredients,
+                                                instructions = local.instructions,
+                                                source = "local"
+                                            )
+                                        )
+                                    },
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
                                     if (local.imageUrl.isNotEmpty()) {
                                         AsyncImage(
                                             model = local.imageUrl,
@@ -405,13 +439,10 @@ fun ProfileScreen(
                                         )
                                         Spacer(modifier = Modifier.width(12.dp))
                                     }
+
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(local.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(stringResource(id = R.string.label_ingredients_list, local.ingredients), style = MaterialTheme.typography.bodyMedium)
-                                        if (local.isPublic) {
-                                            Text(stringResource(id = R.string.tag_shared_globally), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                                        }
+                                        Text(local.title, fontWeight = FontWeight.Bold)
+                                        Text(local.ingredients)
                                     }
 
                                     IconButton(onClick = {
@@ -424,11 +455,11 @@ fun ProfileScreen(
                                         isPublicChecked = local.isPublic
                                         selectedSubTab = 1
                                     }) {
-                                        Icon(Icons.Default.Edit, contentDescription = stringResource(id = R.string.cd_edit_icon), tint = MaterialTheme.colorScheme.secondary)
+                                        Icon(Icons.Default.Edit, contentDescription = "Edit")
                                     }
 
                                     IconButton(onClick = { recipeToDelete = local }) {
-                                        Icon(Icons.Default.Delete, contentDescription = stringResource(id = R.string.btn_delete), tint = MaterialTheme.colorScheme.error)
+                                        Icon(Icons.Default.Delete, contentDescription = "Delete")
                                     }
                                 }
                             }
@@ -437,7 +468,17 @@ fun ProfileScreen(
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
                         item {
-                            OutlinedTextField(value = titleInput, onValueChange = { titleInput = it }, label = { Text(stringResource(id = R.string.hint_meal_title)) }, modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(
+                                value = titleInput,
+                                onValueChange = { titleInput = it },
+                                label = { Text(stringResource(id = R.string.hint_meal_title)) },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    disabledContainerColor = MaterialTheme.colorScheme.surface
+                                )
+                            )
                             Spacer(modifier = Modifier.height(8.dp))
 
                             OutlinedTextField(
@@ -445,7 +486,12 @@ fun ProfileScreen(
                                 onValueChange = { ingredientsInput = it },
                                 label = { Text(stringResource(id = R.string.hint_ingredients_comma)) },
                                 placeholder = { Text(stringResource(id = R.string.placeholder_ingredients_example)) },
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    disabledContainerColor = MaterialTheme.colorScheme.surface
+                                )
                             )
                             Spacer(modifier = Modifier.height(8.dp))
 
@@ -455,13 +501,19 @@ fun ProfileScreen(
                                 label = { Text(stringResource(id = R.string.hint_instructions_title)) },
                                 modifier = Modifier.fillMaxWidth(),
                                 minLines = 4,
-                                maxLines = 8
+                                maxLines = 8,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    disabledContainerColor = MaterialTheme.colorScheme.surface
+                                )
                             )
                             Spacer(modifier = Modifier.height(12.dp))
 
                             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                                 OutlinedButton(onClick = { galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
                                     Text(stringResource(id = R.string.btn_pick_gallery))
+
                                 }
                                 if (imageUriString.isNotEmpty()) {
                                     AsyncImage(model = imageUriString, contentDescription = stringResource(id = R.string.cd_preview_image), modifier = Modifier.size(60.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
@@ -503,6 +555,14 @@ fun ProfileScreen(
                                             isPublic = finalIsPublic
                                             imageUrl = finalImage
                                             userId = currentUid
+                                        }
+
+                                        // 👈 ОВДЕ: Изброј ги состојките што корисникот реално ги внел
+                                        val ingredientsCount = finalCleanedIngredients.split(",").filter { it.isNotBlank() }.size
+
+                                        // 👈 ОВДЕ: Го активираме аналитичкиот настан само кога се КРЕИРА нов рецепт (не кога едитираме)
+                                        if (!isEditMode) {
+                                            onRecipeCreatedLogged(finalTitle, ingredientsCount)
                                         }
 
                                         coroutineScope.launch(Dispatchers.IO) {
@@ -570,7 +630,13 @@ fun ProfileScreen(
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text(if (isEditMode) stringResource(id = R.string.btn_update_recipe_action) else stringResource(id = R.string.btn_save_profile_action))
+                                Text(
+                                    text = when {
+                                        isEditMode -> msgRecipeUpdated
+                                        isPublicChecked -> stringResource(id = R.string.btn_share_to_community)
+                                        else -> stringResource(id = R.string.btn_save_profile_action)
+                                    }
+                                )
                             }
                         }
                     }

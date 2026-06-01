@@ -35,7 +35,8 @@ fun ExplorerScreen(
     apiSuggestions: List<ApiMeal>,
     randomKeyword: String,
     isSuggestionsLoading: Boolean,
-    onRecipeClick: (DetailRecipeView) -> Unit
+    onRecipeClick: (DetailRecipeView) -> Unit,
+    onSearchLogged: (String) -> Unit // 👈 Го додадовме овој callback за Firebase Analytics
 ) {
     val context = LocalContext.current
     var searchQuery by rememberSaveable { mutableStateOf("") }
@@ -66,12 +67,19 @@ fun ExplorerScreen(
                 placeholder = { Text(stringResource(id = R.string.search_meals_hint)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = stringResource(id = R.string.cd_search_icon)) },
                 modifier = Modifier.weight(1f),
-                singleLine = true
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                    focusedContainerColor = MaterialTheme.colorScheme.surface
+                )
             )
             Spacer(modifier = Modifier.width(8.dp))
             Button(
                 onClick = {
                     if (searchQuery.isNotEmpty()) {
+                        // 👈 СЕ АКТИВИРА АНАЛИТИКАТА ТУКА: Го испраќа поимот за пребарување во MainActivity
+                        onSearchLogged(searchQuery.trim())
+
                         isLoading = true
                         isSearchingActive = true
                         coroutineScope.launch {
@@ -160,7 +168,13 @@ fun ExplorerScreen(
                                             )
                                         )
                                     },
-                                elevation = CardDefaults.cardElevation(2.dp)
+                                shape = RoundedCornerShape(20.dp),
+                                elevation = CardDefaults.cardElevation(
+                                    defaultElevation = 6.dp
+                                ),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                )
                             ) {
                                 Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                     AsyncImage(model = meal.strMealThumb, contentDescription = meal.strMeal, modifier = Modifier
@@ -205,7 +219,14 @@ fun ExplorerScreen(
                                                 .clickable {
                                                     onRecipeClick(DetailRecipeView("", recipe.title, recipe.imageUrl, recipe.ingredients, recipe.instructions, "Community Shared"))
                                                 },
-                                            elevation = CardDefaults.cardElevation(2.dp)
+
+                                                    shape = RoundedCornerShape(20.dp),
+                                            elevation = CardDefaults.cardElevation(
+                                                defaultElevation = 6.dp
+                                            ),
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = MaterialTheme.colorScheme.surface
+                                            )
                                         ) {
                                             Column {
                                                 if (recipe.imageUrl.isNotEmpty()) {
@@ -239,7 +260,7 @@ fun ExplorerScreen(
                             item {
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                                 ) {
                                     Column(
                                         modifier = Modifier.padding(16.dp),
@@ -275,12 +296,12 @@ fun ExplorerScreen(
                             item {
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                                 ) {
                                     Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(stringResource(id = R.string.empty_kitchen_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                                        Text(stringResource(id = R.string.empty_kitchen_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                         Spacer(modifier = Modifier.height(4.dp))
-                                        Text(stringResource(id = R.string.empty_kitchen_subtitle), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                                        Text(stringResource(id = R.string.empty_kitchen_subtitle), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
                                     }
                                 }
                             }
@@ -293,7 +314,13 @@ fun ExplorerScreen(
                                         .clickable {
                                             onRecipeClick(DetailRecipeView("", local.title, local.imageUrl, local.ingredients, local.instructions, "My Kitchen (Local)"))
                                         },
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                    shape = RoundedCornerShape(20.dp),
+                                    elevation = CardDefaults.cardElevation(
+                                        defaultElevation = 6.dp
+                                    ),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surface
+                                    )
                                 ) {
                                     Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
                                         if (local.imageUrl.isNotEmpty()) {

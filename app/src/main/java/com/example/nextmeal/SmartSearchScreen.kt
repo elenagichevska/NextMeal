@@ -1,5 +1,6 @@
 package com.example.nextmeal
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,6 +13,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -39,7 +42,7 @@ data class RankedApiRecipe(
     val missingIngredients: List<String>
 )
 
-// 2. Логика за обработка и рангирање (работи со англиските стрингови во позадина)
+// 2. Логика за обработка и рангирање
 fun processAndRankRecipes(
     rawIngredients: String,
     title: String,
@@ -80,8 +83,10 @@ fun SmartSearchScreen(
     onIngredientsChange: (Set<String>) -> Unit,
     hasSearched: Boolean,
     onHasSearchedChange: (Boolean) -> Unit,
-    onRecipeClick: (DetailRecipeView) -> Unit
+    onRecipeClick: (DetailRecipeView) -> Unit,
+    onSmartSearchLogged: (Int) -> Unit // 👈 Го додадовме овој callback за Firebase аналитика
 ) {
+
     val context = LocalContext.current
 
     // ДИНАМИЧКО ГРУПИРАЊЕ: Ги зема преведените имиња на категориите од strings.xml
@@ -123,7 +128,6 @@ fun SmartSearchScreen(
             if (apiResults.isEmpty()) {
                 isLoading = true
                 try {
-                    // И понатаму го земаме англиското име ("chicken") за пребарување во API
                     val mainIngredient = selectedIngredients.firstOrNull() ?: ""
                     if (mainIngredient.isNotEmpty()) {
                         val response = MealApiService.instance.getMealsByIngredient(mainIngredient.lowercase())
@@ -167,40 +171,118 @@ fun SmartSearchScreen(
 
     Column(modifier = Modifier.padding(16.dp)) {
         if (!hasSearched) {
-            Text(stringResource(id = R.string.fridge_screen_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(stringResource(id = R.string.fridge_screen_subtitle), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+            Column(modifier = Modifier.padding(16.dp)) {
+
+                Text(
+                    text = stringResource(id = R.string.fridge_screen_title),
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .padding(bottom = 4.dp)
+                        .drawBehind {
+                            // мала сенка ефект (soft shadow feel)
+                            drawContext.canvas.nativeCanvas.apply {
+                                val paint = android.graphics.Paint().apply {
+                                    color = android.graphics.Color.BLACK
+                                    alpha = 25
+                                    setShadowLayer(12f, 0f, 6f, android.graphics.Color.BLACK)
+                                }
+                            }
+                        }
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                HorizontalDivider(
+                    modifier = Modifier.width(160.dp),
+                    thickness = 3.dp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = stringResource(id = R.string.fridge_screen_subtitle),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.9f)
+                )
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             LazyColumn(modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()) {
                 groupedIngredients.forEach { (categoryName, ingredients) ->
-                    item {
-                        // Приказ на преведената категорија
-                        Text(text = categoryName, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 8.dp))
-                    }
-                    this.items(items = ingredients) { ingredient ->
-                        Row(modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(
-                                // Се проверува и зачувува преку чистиот англиски стринг ("chicken") во позадина
-                                checked = selectedIngredients.contains(ingredient.name),
-                                onCheckedChange = { isChecked ->
-                                    val currentSet = selectedIngredients.toMutableSet()
-                                    if (isChecked) currentSet.add(ingredient.name)
-                                    else currentSet.remove(ingredient.name)
-                                    onIngredientsChange(currentSet)
-                                }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
 
-                            // ДИНАМИЧКИ ПРЕВОД: Се прикажува локализираното име од ресурсите
-                            Text(
-                                text = "${stringResource(id = ingredient.nameRes)}  ${ingredient.emoji}",
-                                style = MaterialTheme.typography.bodyLarge
+                    item {
+
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            shape = RoundedCornerShape(20.dp),
+                            elevation = CardDefaults.cardElevation(
+                                defaultElevation = 6.dp
+                            ),
+                            border = BorderStroke(
+                                1.dp,
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                            ),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface
                             )
+                        ) {
+
+                            Column(
+                                modifier = Modifier.padding(16.dp)
+                            ) {
+
+                                Text(
+                                    text = categoryName,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                ingredients.forEach { ingredient ->
+
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 2.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+
+                                        Checkbox(
+                                            checked = selectedIngredients.contains(ingredient.name),
+                                            onCheckedChange = { isChecked ->
+
+                                                val currentSet =
+                                                    selectedIngredients.toMutableSet()
+
+                                                if (isChecked)
+                                                    currentSet.add(ingredient.name)
+                                                else
+                                                    currentSet.remove(ingredient.name)
+
+                                                onIngredientsChange(currentSet)
+                                            }
+                                        )
+
+                                        Spacer(modifier = Modifier.width(8.dp))
+
+                                        Text(
+                                            text = "${stringResource(id = ingredient.nameRes)} ${ingredient.emoji}",
+                                            style = MaterialTheme.typography.bodyLarge
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -212,13 +294,20 @@ fun SmartSearchScreen(
                     onClick = { onIngredientsChange(emptySet()) },
                     modifier = Modifier.height(50.dp),
                     enabled = selectedIngredients.isNotEmpty(),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
                 ) {
                     Text(stringResource(id = R.string.btn_clear_all))
                 }
 
                 Button(
-                    onClick = { onHasSearchedChange(true) },
+                    onClick = {
+                        // 👈 Се активира аналитиката точно ТУКА на клик со точниот број на намирници
+                        onSmartSearchLogged(selectedIngredients.size)
+                        onHasSearchedChange(true)
+                    },
                     modifier = Modifier
                         .weight(1f)
                         .height(50.dp),
@@ -228,12 +317,12 @@ fun SmartSearchScreen(
                 }
             }
         } else {
-            // Резултати од пребарувањето (Останува идентично и оптимизирано)
-            Row(
+            // 👈 СОВРШЕНО ЦЕНТРИРАН НАСЛОВ СО ПОМОШ НА BOX КОМПОНЕНТА
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
+                contentAlignment = Alignment.Center
             ) {
                 IconButton(
                     onClick = {
@@ -242,7 +331,7 @@ fun SmartSearchScreen(
                     },
                     modifier = Modifier
                         .size(40.dp)
-                        .align(Alignment.CenterVertically)
+                        .align(Alignment.CenterStart) // Иконата оди скроз лево
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -251,11 +340,9 @@ fun SmartSearchScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
-
                 Text(
                     text = stringResource(id = R.string.search_results_main_title),
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.titleLarge, // Оптимизирано за насловна лента
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -272,11 +359,11 @@ fun SmartSearchScreen(
                             Text(stringResource(id = R.string.section_matched_custom_recipes), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 8.dp))
                         }
                         this.items(items = matchedCustomResults) { ranked ->
-                            val containerColor = if (ranked.source == sourceLocal) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                            val containerColor = MaterialTheme.colorScheme.surface
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
+                                    .padding(vertical = 6.dp)
                                     .clickable {
                                         onRecipeClick(
                                             DetailRecipeView(
@@ -289,8 +376,14 @@ fun SmartSearchScreen(
                                             )
                                         )
                                     },
-                                colors = CardDefaults.cardColors(containerColor = containerColor)
-                            ) {
+                                shape = RoundedCornerShape(20.dp),
+                                elevation = CardDefaults.cardElevation(
+                                    defaultElevation = 6.dp
+                                ),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                )
+                            ){
                                 Row(modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -328,7 +421,7 @@ fun SmartSearchScreen(
 
                     if (apiResults.isNotEmpty()) {
                         item {
-                            Text(stringResource(id = R.string.section_global_api_inspiration), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(vertical = 8.dp))
+                            Text(stringResource(id = R.string.section_global_api_inspiration), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 8.dp))
                         }
                         this.items(items = apiResults) { rankedApi ->
                             Card(
@@ -346,8 +439,15 @@ fun SmartSearchScreen(
                                                 source = sourceGlobalApi
                                             )
                                         )
-                                    }
-                            ) {
+                                    },
+                                shape = RoundedCornerShape(20.dp),
+                                elevation = CardDefaults.cardElevation(
+                                    defaultElevation = 6.dp
+                                ),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                )
+                            ){
                                 Row(modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -363,7 +463,6 @@ fun SmartSearchScreen(
                                     Column(modifier = Modifier.weight(1f)) {
                                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                             Text(rankedApi.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                            Text(sourceGlobalApi, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
                                         }
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(stringResource(id = R.string.label_ingredients_list, rankedApi.allIngredientsString), style = MaterialTheme.typography.bodyMedium, maxLines = 2)

@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">NextMeal</string>
 
-    <string name="auth_title_login">Добредојдовте во NextMeal 🍽️</string>
+    <string name="auth_title_login">Добредојдовте во NextMeal 🥘</string>
     <string name="auth_title_register">Креирај Профил 🍳</string>
     <string name="auth_subtitle_login">Најави се за да го погледнеш фрижидерот</string>
     <string name="auth_subtitle_register">Внесете ги вашите детали подолу</string>
@@ -46,11 +46,11 @@
     <string name="btn_search_action">Пребарај</string>
     <string name="error_no_meals_found">Не се пронајдени оброци со тоа име.</string>
     <string name="search_results_header">Резултати од пребарувањето:</string>
-    <string name="section_daily_inspiration">Дневна кулинарска инспирација 💫</string>
-    <string name="today_inspiration_tag">Денешна инспирација: %1$s 👨‍🍳</string>
-    <string name="section_community_popular">Популарни од заедницата 🌍</string>
+    <string name="section_daily_inspiration">Дневна кулинарска инспирација </string>
+    <string name="today_inspiration_tag">Денешна инспирација: %1$s </string>
+    <string name="section_community_popular">Популарни од заедницата </string>
     <string name="empty_community_recipes">Сè уште нема јавни рецепти. Бидете први што ќе споделите!</string>
-    <string name="section_my_masterpieces">Мои кујнски ремек-дела 👩‍🍳</string>
+    <string name="section_my_masterpieces">Мои кујнски ремек-дела </string>
     <string name="guest_lock_title">Вашата дигитална кујна е заклучена! 🔒</string>
     <string name="guest_lock_subtitle">За да креирате и прегледувате ваши лични рецепти, ве молиме најавете се или регистрирајте целосен профил.</string>
     <string name="btn_login_register_action">Најава / Регистрација 🍳</string>
@@ -70,7 +70,7 @@
     <string name="dialog_delete_account_title">Избриши го профилот?</string>
     <string name="dialog_delete_account_text">Дали сте потполно сигурни дека сакате да го избришете вашиот профил? Сите податоци ќе бидат трајно избришани.</string>
     <string name="btn_delete_permanently">Избриши трајно</string>
-    <string name="guest_profile_title">Прелистувате како Гост 🍽️</string>
+    <string name="guest_profile_title">Прелистувате како Гостин 🍽️</string>
     <string name="guest_profile_subtitle">Креирајте профил или најавете се за да ги отклучите сите возможности, како додавање ваши рецепти и личен профил!</string>
     <string name="btn_signin_create_account">Најави се / Креирај профил 🍳</string>
     <string name="edit_profile_header">Уреди Профил</string>
@@ -83,7 +83,7 @@
     <string name="tab_edit_recipe_indicator">Уреди рецепт ✏️</string>
     <string name="tab_add_new">Додај нов</string>
     <string name="empty_my_recipes_notice">Сè уште немате додадено ваши рецепти.</string>
-    <string name="tag_shared_globally">Споделено глобално 🌍</string>
+    <string name="tag_shared_globally">Споделено глобално </string>
     <string name="hint_meal_title">Наслов на јадењето</string>
     <string name="hint_ingredients_comma">Состојки (разделени со запирка)</string>
     <string name="placeholder_ingredients_example">домат, сирење, кромид</string>
@@ -94,6 +94,7 @@
     <string name="switch_save_room">Зачувај приватно во Room</string>
     <string name="btn_update_recipe_action">Ажурирај рецепт</string>
     <string name="btn_save_profile_action">Зачувај на мојот профил</string>
+    <string name="btn_share_to_community">Сподели со заедницата</string>
 
     <string name="toast_recipe_deleted">Рецептот е успешно избришан!</string>
     <string name="toast_account_deleted">Профилот е избришан.</string>
