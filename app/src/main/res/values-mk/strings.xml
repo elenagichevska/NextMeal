@@ -42,7 +42,7 @@
     <string name="nav_profile">Профил</string>
 
     <string name="explorer_main_title">Истражи рецепти</string>
-    <string name="search_meals_hint">Пребарувај оброци на интернет...</string>
+    <string name="search_meals_hint">Пребарувај оброци...</string>
     <string name="btn_search_action">Пребарај</string>
     <string name="error_no_meals_found">Не се пронајдени оброци со тоа име.</string>
     <string name="search_results_header">Резултати од пребарувањето:</string>
@@ -88,10 +88,11 @@
     <string name="hint_ingredients_comma">Состојки (разделени со запирка)</string>
     <string name="placeholder_ingredients_example">домат, сирење, кромид</string>
     <string name="hint_instructions_title">Инструкции</string>
-    <string name="btn_pick_gallery">Избери слика од галерија 📸</string>
+    <string name="btn_pick_gallery">Галерија</string>
+    <string name="btn_take_photo">Сликај</string>
     <string name="label_no_image_selected">Нема избрана слика</string>
-    <string name="switch_share_firebase">Сподели јавно на Firebase</string>
-    <string name="switch_save_room">Зачувај приватно во Room</string>
+    <string name="switch_share_firebase">Сподели јавно</string>
+    <string name="switch_save_room">Зачувај приватно</string>
     <string name="btn_update_recipe_action">Ажурирај рецепт</string>
     <string name="btn_save_profile_action">Зачувај на мојот профил</string>
     <string name="btn_share_to_community">Сподели со заедницата</string>

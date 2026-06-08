@@ -42,7 +42,7 @@
     <string name="nav_profile">Profile</string>
 
     <string name="explorer_main_title">Explore Recipes</string>
-    <string name="search_meals_hint">Search meals online...</string>
+    <string name="search_meals_hint">Search meals...</string>
     <string name="btn_search_action">Search</string>
     <string name="error_no_meals_found">No meals found with that name.</string>
     <string name="search_results_header">Search Results:</string>
@@ -88,10 +88,11 @@
     <string name="hint_ingredients_comma">Ingredients (comma separated)</string>
     <string name="placeholder_ingredients_example">tomato, cheese, onion</string>
     <string name="hint_instructions_title">Instructions</string>
-    <string name="btn_pick_gallery">Pick Image from Gallery 📸</string>
+    <string name="btn_pick_gallery">Gallery</string>
+    <string name="btn_take_photo">Take photo</string>
     <string name="label_no_image_selected">No image selected</string>
-    <string name="switch_share_firebase">Share publicly on Firebase</string>
-    <string name="switch_save_room">Save privately in Room</string>
+    <string name="switch_share_firebase">Share publicly</string>
+    <string name="switch_save_room">Save privately</string>
     <string name="btn_update_recipe_action">Update Recipe</string>
     <string name="btn_save_profile_action">Save to My Profile</string>
     <string name="btn_share_to_community">Share with Community</string>

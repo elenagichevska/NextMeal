@@ -232,7 +232,7 @@ fun SmartSearchScreen(
 
             LazyVerticalGrid(
                 columns = GridCells.Fixed(categoryColumns),
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(8.dp)
@@ -351,14 +351,14 @@ fun SmartSearchScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             if (isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
             } else {
                 // ГРИД ЗА РЕЗУЛТАТИ (Прилагоден за Landscape: 2 колони една до друга / Portrait: 1 колона)
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(resultColumns),
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {

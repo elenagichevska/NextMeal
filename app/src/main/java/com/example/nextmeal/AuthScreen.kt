@@ -154,7 +154,7 @@ fun AuthScreen(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(14.dp))
             }
 
             if (isRegisterMode) {
@@ -169,7 +169,7 @@ fun AuthScreen(
                         focusedContainerColor = MaterialTheme.colorScheme.surface
                     )
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(6.dp))
             }
 
             OutlinedTextField(
@@ -183,7 +183,7 @@ fun AuthScreen(
                     focusedContainerColor = MaterialTheme.colorScheme.surface
                 )
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
@@ -198,7 +198,7 @@ fun AuthScreen(
             )
 
             if (isRegisterMode) {
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 OutlinedTextField(
                     value = confirmPassword,
                     onValueChange = { confirmPassword = it },
@@ -213,7 +213,7 @@ fun AuthScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             Button(
                 onClick = {
@@ -266,13 +266,13 @@ fun AuthScreen(
                 Text(if (isRegisterMode) stringResource(id = R.string.btn_register_email) else stringResource(id = R.string.btn_login_email))
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             TextButton(onClick = { isRegisterMode = !isRegisterMode }) {
                 Text(if (isRegisterMode) stringResource(id = R.string.switch_to_login) else stringResource(id = R.string.switch_to_register))
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -281,7 +281,7 @@ fun AuthScreen(
                 Text(text = stringResource(id = R.string.or_connect_with), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(horizontal = 8.dp))
                 HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline)
             }
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // Социјални копчиња кои убаво се скалираат во рамки на ограничениот макс-ширина контејнер
             Row(
@@ -321,7 +321,7 @@ fun AuthScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -330,7 +330,7 @@ fun AuthScreen(
                 Text(text = stringResource(id = R.string.divider_guest_notice), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(horizontal = 8.dp))
                 HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f))
             }
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             ElevatedButton(
                 onClick = {

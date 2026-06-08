@@ -4,7 +4,6 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Build
-import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -53,7 +52,10 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 import androidx.compose.ui.platform.LocalConfiguration
 import android.content.res.Configuration
-
+import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 class MainActivity : ComponentActivity() {
     private lateinit var firebaseAnalytics: FirebaseAnalytics
     private val callbackManager = CallbackManager.Factory.create()
@@ -62,26 +64,6 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-
-        try {
-            @Suppress("DEPRECATION")
-            val info = packageManager.getPackageInfo(
-                packageName,
-                android.content.pm.PackageManager.GET_SIGNATURES
-            )
-            // 🌟 Додадена е ?.forEach за безбедно да врти само ако signatures не е null
-            info.signatures?.forEach { signature ->
-                val md = java.security.MessageDigest.getInstance("SHA")
-                md.update(signature.toByteArray())
-                val keyHash = android.util.Base64.encodeToString(md.digest(), android.util.Base64.DEFAULT)
-                android.util.Log.d("FACEBOOK_KEY_HASH", "Твојот Key Hash е: ${keyHash.trim()}")
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("FACEBOOK_KEY_HASH", "Грешка при преземање клуч", e)
-        }
-
-
 
         if (BuildConfig.DEBUG) {
             try {
@@ -187,8 +169,10 @@ class MainActivity : ComponentActivity() {
                                     googleSignInLauncher.launch(signInIntent)
                                 },
                                 onFacebookSignIn = {
-                                    LoginManager.getInstance().logInWithReadPermissions(this, listOf("email", "public_profile"))
-                                    facebookLauncher.launch(android.content.Intent())
+                                    LoginManager.getInstance().logInWithReadPermissions(
+                                        this,
+                                        listOf("email", "public_profile")
+                                    )
                                 },
                                 onAuthEventLogged = { eventName ->
                                     val bundle = Bundle().apply { putString("auth_method", eventName) }
@@ -209,6 +193,23 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        callbackManager.onActivityResult(requestCode, resultCode, data)
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+
+        if (hasFocus) {
+            val windowInsetsController = WindowInsetsControllerCompat(window, window.decorView)
+            windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars())
+            windowInsetsController.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+    }
+
 }
 
 sealed class Screen(val route: String, val titleResId: Int, val icon: androidx.compose.ui.graphics.vector.ImageVector) {

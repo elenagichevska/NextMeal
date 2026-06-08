@@ -41,6 +41,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.Firebase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import android.net.Uri
+import androidx.core.content.FileProvider
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -106,6 +109,28 @@ fun ProfileScreen(
                 contentResolver.takePersistableUriPermission(uri, takeFlags)
             } catch (e: Exception) { e.printStackTrace() }
             imageUriString = uri.toString()
+        }
+    }
+
+    var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
+
+// 2. Функција која генерира безбедно Uri во меморијата на апликацијата
+    val createImageUri = {
+        val file = File(context.cacheDir, "camera_photo_${System.currentTimeMillis()}.jpg")
+        FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider", // Внимавај: Ова мора да се совпаѓа со FileProvider во AndroidManifest
+            file
+        )
+    }
+
+// 3. Launcher-от кој ја активира хардверската камера
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && cameraImageUri != null) {
+            // Ако сликањето е успешно, ја зачувуваме патеката како стринг
+            imageUriString = cameraImageUri.toString()
         }
     }
 
@@ -343,7 +368,6 @@ fun ProfileScreen(
 
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 if (selectedSubTab == 0) {
-                    // 🌟 ПОПРАВКА: Мои рецепти сега се редат по 2 во ред во Landscape на таблет
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(if (isLandscape) 2 else 1),
                         modifier = Modifier.fillMaxSize(),
@@ -391,7 +415,6 @@ fun ProfileScreen(
                         }
                     }
                 } else {
-                    // 🌟 ПОПРАВКА: Додавање/Едитирање рецепт - формата е лимитирана во ширина за да не биде растегната во landscape
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
                         LazyColumn(
                             modifier = Modifier.widthIn(max = 550.dp).fillMaxWidth(),
@@ -428,17 +451,66 @@ fun ProfileScreen(
                                 )
                             }
                             item {
-                                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                                    OutlinedButton(onClick = { galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
-                                        Text(stringResource(id = R.string.btn_pick_gallery))
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    // Лента со две копчиња едно до друго
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp) // Мало растојание меѓу двете копчиња
+                                    ) {
+                                        // 🖼️ Копче за Галерија
+                                        OutlinedButton(
+                                            onClick = { galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                                            modifier = Modifier.weight(1f) // Двете копчиња ќе имаат еднаква ширина
+                                        ) {
+                                            Text(stringResource(id = R.string.btn_pick_gallery))
+                                        }
+
+                                        // 📷 Копче за Камера
+                                        OutlinedButton(
+                                            onClick = {
+                                                val uri = createImageUri()
+                                                cameraImageUri = uri
+                                                cameraLauncher.launch(uri)
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            // Претпоставувам дека имаш или ќе додадеш соодветен стринг во strings.xml
+                                            Text(stringResource(id = R.string.btn_take_photo))
+                                        }
                                     }
+
+                                    // 👁️ Приказот на внесената слика оди ДОЛУ (под копчињата)
                                     if (imageUriString.isNotEmpty()) {
-                                        AsyncImage(model = imageUriString, contentDescription = stringResource(id = R.string.cd_preview_image), modifier = Modifier.size(60.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            AsyncImage(
+                                                model = imageUriString,
+                                                contentDescription = stringResource(id = R.string.cd_preview_image),
+                                                modifier = Modifier
+                                                    .size(120.dp) // Малку поголема слика за подобро да се гледа бидејќи е долу
+                                                    .clip(RoundedCornerShape(8.dp)),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                        }
                                     } else {
-                                        Text(stringResource(id = R.string.label_no_image_selected), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                                        Text(
+                                            text = stringResource(id = R.string.label_no_image_selected),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.outline,
+                                            modifier = Modifier.padding(start = 4.dp)
+                                        )
                                     }
                                 }
                             }
+
                             item {
                                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Switch(checked = isPublicChecked, onCheckedChange = { isPublicChecked = it })
